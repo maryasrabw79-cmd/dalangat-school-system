@@ -6,9 +6,10 @@
   <link rel="stylesheet" href="styles.css?v=2e3d364">
 </head>
 <body>
-  <header class="topbar"><div><div class="eyebrow">مديرية التربية والتعليم بالبحيرة</div><h1>مدرسة الدلنجات الصناعية بنات</h1><p>منظومة الإدارة المدرسية وقاعدة البيانات</p></div><button id="logoutBtn" class="secondary hidden">تسجيل الخروج</button></header>
+  <header class="topbar"><div><div class="eyebrow">مديرية التربية والتعليم بالبحيرة</div><h1>مدرسة الدلنجات الصناعية بنات</h1><p>منظومة الإدارة المدرسية وقاعدة البيانات</p></div><div class="topbar-actions"><button id="homeBtn" class="secondary" type="button">الرئيسية</button><button id="logoutBtn" class="secondary hidden">تسجيل الخروج</button></div></header>
   <main class="container">
-    <section id="loginView" class="panel login-panel"><h2>تسجيل الدخول</h2><p>استخدم حساب المدرسة المعتمد في Supabase.</p><form id="loginForm"><label>البريد الإلكتروني<input id="loginEmail" type="email" autocomplete="username" required></label><label>كلمة المرور<input id="loginPassword" type="password" autocomplete="current-password" required></label><button type="submit">دخول</button><div id="loginMsg" class="message" aria-live="polite"></div></form></section>
+    <section id="homeView" class="home-hero panel"><div class="home-mark">مدرسة الدلنجات الصناعية بنات</div><h2>مدرسة صناعية للبنات</h2><p class="home-intro">تضم المدرسة تخصصات الملابس الجاهزة، وتكنولوجيا الحاسبات، وفني الأجهزة الإلكترونية بنظام الجدارات.</p><div class="home-programs"><div class="program"><strong>الملابس الجاهزة</strong></div><div class="program"><strong>تكنولوجيا الحاسبات</strong></div><div class="program"><strong>فني أجهزة إلكترونية</strong></div></div><p class="home-systems">بالإضافة إلى التعليم المهني، ونظام الخدمات المنتظم، ونظام العمال من الخارج.</p><button id="enterSystemBtn" type="button">دخول منظومة المدرسة</button></section>
+    <section id="loginView" class="panel login-panel hidden"><h2>تسجيل الدخول</h2><p>استخدم حساب المدرسة المعتمد في Supabase.</p><form id="loginForm"><label>البريد الإلكتروني<input id="loginEmail" type="email" autocomplete="username" required></label><label>كلمة المرور<input id="loginPassword" type="password" autocomplete="current-password" required></label><button type="submit">دخول</button><div id="loginMsg" class="message" aria-live="polite"></div></form></section>
     <section id="appView" class="hidden">
       <div class="welcome panel"><div><h2 id="welcomeTitle">لوحة التحكم</h2><p id="roleLabel"></p></div><div class="stats" id="stats"></div></div>
       <nav id="tabs" class="tabs" aria-label="أقسام المنظومة"></nav>
