@@ -48,15 +48,47 @@
     $('#loginView').classList.add('hidden');$('#appView').classList.remove('hidden');$('#logoutBtn').classList.remove('hidden');$('#welcomeTitle').textContent='أهلًا بك في منظومة المدرسة';$('#roleLabel').textContent='صلاحيتك: '+humanRole(state.role);
     renderTabs(); await loadStats(); await loadSection(state.section);
   }
-  function allowedSections(){ if(admin()||state.role==='viewer')return Object.keys(sections); if(state.role==='employee')return ['employees','training_courses']; return ['employees']; }
+  function allowedSections(){ if(admin())return [...Object.keys(sections),'users']; if(state.role==='viewer')return Object.keys(sections); if(state.role==='employee')return ['employees','training_courses']; return ['employees']; }
   function renderTabs(){ const nav=$('#tabs');nav.innerHTML=''; const allowed=allowedSections(); if(!allowed.includes(state.section))state.section=allowed[0]; allowed.forEach(key=>{const b=document.createElement('button');b.className='tab'+(key===state.section?' active':'');b.textContent=sections[key].title;b.onclick=()=>{state.section=key;renderTabs();loadSection(key);};nav.appendChild(b);}); }
+  async function renderUsers(){
+    $('#sectionTitle').textContent='إدارة المستخدمين';
+    $('#sectionDesc').textContent='إنشاء حسابات للأعضاء وإرسال دعوة آمنة للبريد الإلكتروني وتحديد الصلاحيات.';
+    $('#formHost').innerHTML=`<form id="userForm" class="form-grid">
+      <label>اسم العضو<input name="full_name" type="text" required maxlength="120" placeholder="الاسم الكامل"></label>
+      <label>البريد الإلكتروني<input name="email" type="email" required maxlength="254" placeholder="name@example.com"></label>
+      <label>الصلاحية<select name="role" required><option value="employee">موظف</option><option value="manager">إدارة المدرسة</option><option value="principal">مدير المدرسة</option><option value="viewer">عرض فقط</option><option value="admin">مدير النظام</option></select></label>
+      <div class="form-actions"><button type="submit">إنشاء الحساب وإرسال الدعوة</button></div>
+    </form><p>سيصل للعضو بريد دعوة لإكمال إعداد كلمة المرور. لا تكتب كلمة مرور العضو هنا.</p>`;
+    $('#userForm').addEventListener('submit',createManagedUser);
+    say('#sectionMsg','');
+    const {data,error}=await state.client.from('profiles').select('id,full_name,role,created_at').order('created_at',{ascending:false}).limit(500);
+    if(error){$('#tableHead').innerHTML='';$('#tableBody').innerHTML='';say('#sectionMsg','تعذر تحميل المستخدمين: '+error.message,'error');return;}
+    $('#tableHead').innerHTML='<tr><th>اسم العضو</th><th>الصلاحية</th><th>تاريخ الإضافة</th></tr>';
+    $('#tableBody').innerHTML=(data||[]).length?(data||[]).map(u=>'<tr><td>'+esc(u.full_name||'—')+'</td><td>'+esc(humanRole(u.role||'employee'))+'</td><td>'+esc(u.created_at?new Date(u.created_at).toLocaleDateString('ar-EG'):'—')+'</td></tr>').join(''):'<tr><td class="empty" colspan="3">لا يوجد مستخدمون.</td></tr>';
+  }
+  async function createManagedUser(e){
+    e.preventDefault();
+    if(!admin()){say('#sectionMsg','غير مسموح: هذه العملية للإدارة فقط.','error');return;}
+    const form=e.currentTarget,btn=form.querySelector('button[type="submit"]'),fd=new FormData(form);
+    const body={full_name:String(fd.get('full_name')||'').trim(),email:String(fd.get('email')||'').trim().toLowerCase(),role:String(fd.get('role')||'employee')};
+    if(!body.full_name||!body.email){say('#sectionMsg','اكتب اسم العضو والبريد الإلكتروني.','error');return;}
+    btn.disabled=true;btn.textContent='جارٍ إنشاء الحساب...';say('#sectionMsg','جارٍ إنشاء الحساب وإرسال دعوة البريد الإلكتروني...');
+    try{
+      const {data,error}=await state.client.functions.invoke('admin-create-user',{body});
+      if(error)throw error;
+      if(data?.error)throw new Error(data.error);
+      say('#sectionMsg',data?.message||'تم إنشاء الحساب وإرسال الدعوة.','success');
+      form.reset();await renderUsers();
+    }catch(err){console.error('Create user error:',err);say('#sectionMsg','لم يتم إنشاء الحساب. '+(err?.message||String(err))+' — تأكد من نشر وظيفة admin-create-user في Supabase وإعدادها.','error');}
+    finally{btn.disabled=false;btn.textContent='إنشاء الحساب وإرسال الدعوة';}
+  }
   async function loadStats(){const specs=[['employees','العاملون'],['students','الطالبات'],['attendance','سجلات الحضور']];let html='';for(const [t,label] of specs){const {count,error}=await state.client.from(t).select('id',{count:'exact',head:true});html+=`<div class="stat"><strong>${error?'—':(count??0)}</strong><span>${label}</span></div>`;}$('#stats').innerHTML=html;}
   async function getOptions(table){const {data}=await state.client.from(table).select('id,full_name').order('full_name').limit(1000);return data||[];}
   function fieldHTML(f){const [name,label,type='text',required=false,extra]=f;let control='';if(type==='select'){let opts=Array.isArray(extra)?extra.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join(''):'<option value="">جارٍ التحميل...</option>';control=`<select name="${name}" ${required?'required':''}>${name==='status'||name==='employment_status'||name==='grade'||name==='day_of_week'||name==='leave_type'?'<option value="">اختر...</option>':''}${opts}</select>`;}else if(type==='textarea'){control=`<textarea name="${name}" ${required?'required':''}></textarea>`;}else{control=`<input name="${name}" type="${type}" ${required?'required':''} ${type==='number'?'min="0"':''}>`;}return `<label>${esc(label)}${control}</label>`;}
   async function renderForm(sec){const host=$('#formHost');if(!admin()){host.innerHTML='<p>حسابك يملك صلاحية العرض فقط. لا يمكنك إضافة سجلات.</p>';return;}host.innerHTML=`<form id="recordForm" class="form-grid">${sec.fields.map(fieldHTML).join('')}<div class="form-actions"><button type="submit">حفظ السجل</button></div></form>`;
     for(const f of sec.fields){const [name,,type,,extra]=f;if(type==='select' && (extra==='employees'||extra==='students')){const list=await getOptions(extra);const select=$(`[name="${name}"]`);if(select)select.innerHTML='<option value="">اختر...</option>'+list.map(r=>`<option value="${esc(r.id)}">${esc(r.full_name)}</option>`).join('');}}
     $('#recordForm').addEventListener('submit',e=>saveRecord(e,sec));}
-  async function loadSection(key){const sec=sections[key];if(!sec)return;$('#sectionTitle').textContent=sec.title;$('#sectionDesc').textContent=sec.desc;say('#sectionMsg','');await renderForm(sec);
+  async function loadSection(key){if(key==='users'){if(!admin()){say('#sectionMsg','ليس لديك صلاحية إدارة المستخدمين.','error');return;}await renderUsers();return;}const sec=sections[key];if(!sec)return;$('#sectionTitle').textContent=sec.title;$('#sectionDesc').textContent=sec.desc;say('#sectionMsg','');await renderForm(sec);
     const selectCols={employees:'id,full_name,national_id,job_title,specialty,qualification,phone,address,hire_date,created_at',students:'*',attendance:'id,student_id,attendance_date,status,notes,created_at',leaves:'*',training_courses:'*',staff_schedules:'*'};
     const {data,error}=await state.client.from(sec.table).select(selectCols[key]||'*').order('created_at',{ascending:false}).limit(500);
     if(error){say('#sectionMsg','تعذر تحميل البيانات: '+error.message,'error');$('#tableHead').innerHTML='';$('#tableBody').innerHTML='';return;}
