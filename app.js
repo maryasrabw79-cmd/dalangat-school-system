@@ -2,7 +2,7 @@
   'use strict';
   const $ = (s) => document.querySelector(s);
   const cfg = window.SCHOOL_DB_CONFIG || {};
-  const state = { client:null, user:null, profile:null, role:'viewer', section:'employees', cache:{employees:[],students:[]}, rows:[] };
+  const state = { client:null, user:null, profile:null, role:'viewer', section:'employees', pendingAction:null, cache:{employees:[],students:[]}, rows:[] };
   const sections = {
     employees:{title:'العاملون',table:'staff',desc:'سجل بيانات العاملين بالمدرسة.',fields:[['full_name','اسم الموظف','text',true],['employee_no','الكود','text'],['national_id','الرقم القومي','text'],['birth_date','تاريخ الميلاد','date'],['qualification','المؤهل','text'],['hire_date','تاريخ التعيين','date'],['work_start_date','تاريخ استلام العمل','date'],['specialization','التخصص','text'],['job_title','المسمى الوظيفي','text'],['grade','الدرجة','text'],['grade_date','تاريخ الدرجة','date'],['phone','رقم التليفون','tel'],['marital_status','الحالة الاجتماعية','select',false,['أعزب','متزوج','مطلق','أرمل']],['address','العنوان','textarea']],columns:[['full_name','اسم الموظف'],['employee_no','الكود'],['national_id','الرقم القومي'],['birth_date','تاريخ الميلاد'],['qualification','المؤهل'],['hire_date','تاريخ التعيين'],['work_start_date','تاريخ استلام العمل'],['specialization','التخصص'],['job_title','المسمى الوظيفي'],['grade','الدرجة'],['grade_date','تاريخ الدرجة'],['phone','رقم التليفون'],['marital_status','الحالة الاجتماعية'],['address','العنوان']]},
     students:{title:'الطالبات',table:'students',desc:'سجل بيانات الطالبات وقيدهن.',fields:[['full_name','اسم الطالبة','text',true],['student_code','كود الطالبة','text',true],['grade','الصف الدراسي','select',true,['الأول','الثاني','الثالث']],['section','الفصل','text'],['specialization','التخصص','select',true,['فني تكنولوجيا الحاسبات','فني الأجهزة الإلكترونية','فني الملابس الجاهزة']],['enrollment_status','حالة القيد','select',true,['مقيدة','منقطعة','محولة','متخرجة']],['birth_date','تاريخ الميلاد','date'],['guardian_name','اسم ولي الأمر','text'],['guardian_phone','هاتف ولي الأمر','tel']],columns:[['full_name','اسم الطالبة'],['student_code','كود الطالبة'],['grade','الصف'],['section','الفصل'],['specialization','التخصص'],['enrollment_status','الحالة']]},
@@ -20,13 +20,14 @@
       showLogin(); say('#loginMsg','إعدادات Supabase غير مكتملة. راجع ملف config.js.','error'); return;
     }
     state.client=window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey);
-    $('#loginForm').addEventListener('submit',login); $('#logoutBtn').addEventListener('click',logout); $('#refreshBtn').addEventListener('click',()=>loadSection(state.section)); $('#homeBtn').addEventListener('click',showHome); $('#enterSystemBtn').addEventListener('click',showLogin);
-    $('#exportExcelBtn').addEventListener('click',exportReportsToExcel);
+    $('#loginForm').addEventListener('submit',login); $('#logoutBtn').addEventListener('click',logout); $('#refreshBtn').addEventListener('click',()=>loadSection(state.section)); $('#homeBtn').addEventListener('click',showHome); $('#exportSelectedBtn').addEventListener('click',()=>exportReportsToExcel($('#exportSectionSelect').value));
+    $('#homeTabs').querySelectorAll('[data-home-section]').forEach(b=>b.addEventListener('click',()=>{const key=b.dataset.homeSection;state.pendingAction=key==='export'?'export':key;showLogin();}));
     state.client.auth.onAuthStateChange((_event,session)=>{ if(session?.user){ state.user=session.user; setTimeout(loadProfile,0); } else { state.user=null; state.profile=null; showLogin(); }});
     const {data:{session}}=await state.client.auth.getSession(); if(session?.user){state.user=session.user;await loadProfile();} else showHome();
   }
-  function showHome(){ $('#homeView').classList.remove('hidden'); $('#loginView').classList.add('hidden'); $('#appView').classList.add('hidden'); $('#logoutBtn').classList.add('hidden'); $('#homeBtn').classList.remove('hidden'); }
+  function showHome(){ $('#homeView').classList.remove('hidden'); $('#loginView').classList.add('hidden'); $('#appView').classList.add('hidden'); $('#logoutBtn').classList.add('hidden'); $('#homeBtn').classList.add('hidden'); }
   function showLogin(){ $('#homeView').classList.add('hidden'); $('#loginView').classList.remove('hidden'); $('#appView').classList.add('hidden'); $('#logoutBtn').classList.add('hidden'); $('#homeBtn').classList.remove('hidden'); }
+  function showExportOptions(){ $('#exportView').classList.remove('hidden'); $('#dataView').classList.add('hidden'); const select=$('#exportSectionSelect'); const keys=admin()?[...Object.keys(sections),'users']:allowedSections().filter(k=>k!=='users'); select.innerHTML=keys.map(k=>`<option value="${esc(k)}">${esc(k==='users'?'إدارة المستخدمين':sections[k]?.title||k)}</option>`).join(''); $('#exportMsg').textContent=''; }
   async function login(e){
     e.preventDefault();
     const button=$('#loginForm button[type="submit"]');
@@ -48,7 +49,7 @@
     if(!data){showLogin();say('#loginMsg','تم الدخول، لكن لا يوجد سجل لهذا الحساب في profiles. اطلب من مسؤول النظام ربط الحساب بملف وصلاحية.','error');return;}
     state.profile=data;state.role=String(data.role||'viewer').toLowerCase();
     $('#loginView').classList.add('hidden');$('#appView').classList.remove('hidden');$('#logoutBtn').classList.remove('hidden');$('#welcomeTitle').textContent='أهلًا بك في منظومة المدرسة';$('#roleLabel').textContent='صلاحيتك: '+humanRole(state.role);
-    renderTabs(); await loadStats(); await loadSection(state.section);
+    renderTabs(); await loadStats(); const requested=state.pendingAction; state.pendingAction=null; if(requested==='export'){showExportOptions();return;} if(requested&&requested!=='users'&&sections[requested]&&allowedSections().includes(requested))state.section=requested; else if(requested==='users'&&admin())state.section='users'; if(!allowedSections().includes(state.section))state.section=allowedSections()[0]||'employees'; renderTabs(); $('#exportView').classList.add('hidden'); $('#dataView').classList.remove('hidden'); await loadSection(state.section);
   }
   function allowedSections(){ if(admin())return [...Object.keys(sections),'users']; if(state.role==='employee')return ['students','attendance']; return []; }
   function renderTabs(){ const nav=$('#tabs');nav.innerHTML=''; const allowed=allowedSections(); if(!allowed.length){nav.innerHTML='<span>لا توجد أقسام متاحة لهذا الحساب.</span>';return;} if(!allowed.includes(state.section))state.section=allowed[0]; allowed.forEach(key=>{const b=document.createElement('button');b.className='tab'+(key===state.section?' active':'');b.textContent=key==='users'?'إدارة المستخدمين':sections[key].title;b.onclick=()=>{state.section=key;renderTabs();loadSection(key);};nav.appendChild(b);}); }
@@ -127,15 +128,18 @@
     }
     return all;
   }
-  async function exportReportsToExcel(){
-    const btn=$('#exportExcelBtn');
-    if(!window.XLSX){say('#sectionMsg','مكتبة Excel لم تُحمّل. تحقق من اتصال الإنترنت ثم حدّث الصفحة.','error');return;}
+  async function exportReportsToExcel(selectedKey){
+    const btn=$('#exportSelectedBtn');
+    if(!window.XLSX){say('#exportMsg','مكتبة Excel لم تُحمّل. تحقق من اتصال الإنترنت ثم حدّث الصفحة.','error');return;}
     btn.disabled=true;const oldText=btn.textContent;btn.textContent='جارٍ تجهيز ملف Excel...';
-    say('#sectionMsg','جارٍ جمع بيانات الأقسام المسموح بها وتجهيز ملف Excel...');
+    say('#exportMsg','جارٍ جمع بيانات القسم المحدد وتجهيز ملف Excel...');
     try{
-      const keys=admin()?Object.keys(sections):allowedSections().filter(k=>k!=='users');
+      const permitted=admin()?[...Object.keys(sections),'users']:allowedSections().filter(k=>k!=='users');
+      if(!permitted.includes(selectedKey))throw new Error('هذا القسم غير متاح لصلاحية حسابك.');
+      const keys=[selectedKey];
       const wb=window.XLSX.utils.book_new();
       for(const key of keys){
+        if(key==='users')continue;
         const sec=sections[key]; if(!sec)continue;
         let rows=await fetchAllRows(sec.table);
         if(key==='attendance'||key==='leaves'||key==='training_courses'||key==='staff_schedules'){
@@ -159,7 +163,7 @@
         ws['!cols']=cols.map(k=>({wch:Math.min(32,Math.max(14,(reportLabels[k]||k).length+4))}));
         window.XLSX.utils.book_append_sheet(wb,ws,sec.title.slice(0,31));
       }
-      if(admin()){
+      if(selectedKey==='users'&&admin()){
         const users=await fetchAllRows('profiles','full_name,role,created_at');
         const userCols=['full_name','role','created_at'];
         const userData=[[...userCols.map(k=>reportLabels[k]||k)],...users.map(u=>userCols.map(k=>k==='role'?humanRole(u[k]||'employee'):(u[k]??'')))];
@@ -168,10 +172,10 @@
       }
       const stamp=new Date().toISOString().slice(0,10);
       window.XLSX.writeFile(wb,'تقارير_مدرسة_الدلنجات_'+stamp+'.xlsx');
-      say('#sectionMsg','تم تجهيز ملف Excel وتنزيله. يحتوي كل قسم في ورقة مستقلة داخل الملف.','success');
+      say('#exportMsg','تم تصدير القسم المحدد إلى ملف Excel.','success');
     }catch(err){
       console.error('Excel export error:',err);
-      say('#sectionMsg','تعذر إنشاء تقرير Excel: '+(err?.message||String(err)),'error');
+      say('#exportMsg','تعذر إنشاء تقرير Excel: '+(err?.message||String(err)),'error');
     }finally{btn.disabled=false;btn.textContent=oldText;}
   }
   async function loadStats(){const specs=[['staff','العاملون'],['students','الطالبات'],['attendance','سجلات الحضور']];let html='';for(const [t,label] of specs){const {count,error}=await state.client.from(t).select('id',{count:'exact',head:true});html+=`<div class="stat"><strong>${error?'—':(count??0)}</strong><span>${label}</span></div>`;}$('#stats').innerHTML=html;}
