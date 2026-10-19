@@ -11,7 +11,7 @@
     training_courses:{title:'التدريب',table:'training_courses',desc:'إدارة الدورات التدريبية ومتابعتها.',fields:[['title','اسم الدورة','text',true],['provider','الجهة المنظمة','text'],['start_date','تاريخ البداية','date'],['end_date','تاريخ النهاية','date'],['duration_days','المدة بالأيام','number'],['participants','المشاركون','text'],['notes','ملاحظات','textarea']],columns:[['title','الدورة'],['provider','الجهة المنظمة'],['start_date','البداية'],['end_date','النهاية'],['duration_days','المدة'],['participants','المشاركون']]},
     staff_schedules:{title:'الجداول',table:'staff_schedules',desc:'إدارة الجداول المدرسية والحصص.',fields:[['day_of_week','اليوم','select',true,['السبت','الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس']],['period_no','رقم الحصة','number',true],['class_or_location','الفصل / المكان','text',true],['employee_id','المعلم/المعلمة','select',false,'employees'],['notes','ملاحظات','textarea']],columns:[['day_of_week','اليوم'],['period_no','الحصة'],['class_or_location','الفصل / المكان'],['employee_name','المعلم/المعلمة'],['notes','ملاحظات']]}
   };
-  const admin = () => ['admin','manager','principal'].includes(state.role);
+  const admin = () => state.role === 'admin';
   const say = (id,msg,type='') => { const el=$(id); if(el){el.textContent=msg;el.className='message '+type;} };
   const esc = (v) => String(v ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const humanRole = r => ({admin:'مدير النظام',manager:'إدارة المدرسة',principal:'مدير المدرسة',viewer:'عرض فقط',employee:'موظف'})[r] || r;
@@ -56,7 +56,7 @@
     $('#formHost').innerHTML=`<form id="userForm" class="form-grid">
       <label>اسم العضو<input name="full_name" type="text" required maxlength="120" placeholder="الاسم الكامل"></label>
       <label>البريد الإلكتروني<input name="email" type="email" required maxlength="254" placeholder="name@example.com"></label>
-      <label>الصلاحية<select name="role" required><option value="employee">موظف</option><option value="manager">إدارة المدرسة</option><option value="principal">مدير المدرسة</option><option value="viewer">عرض فقط</option><option value="admin">مدير النظام</option></select></label>
+      <label>الصلاحية<select name="role" required><option value="employee">موظف</option><option value="admin">مدير النظام</option></select></label>
       <div class="form-actions"><button type="submit">إنشاء الحساب وإرسال الدعوة</button></div>
     </form><p>سيصل للعضو بريد دعوة لإكمال إعداد كلمة المرور. لا تكتب كلمة مرور العضو هنا.</p>`;
     $('#userForm').addEventListener('submit',createManagedUser);
