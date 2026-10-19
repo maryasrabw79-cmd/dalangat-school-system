@@ -17,7 +17,7 @@
   const humanRole = r => ({admin:'مدير النظام',manager:'إدارة المدرسة',principal:'مدير المدرسة',viewer:'عرض فقط',employee:'موظف'})[r] || r;
   async function init(){
     if(!window.supabase || !cfg.supabaseUrl || !cfg.supabaseAnonKey || cfg.supabaseUrl.includes('YOUR-PROJECT')){
-      $('#loginView').classList.remove('hidden'); say('#loginMsg','إعدادات Supabase غير مكتملة. راجع ملف config.js.','error'); return;
+      showLogin(); say('#loginMsg','إعدادات Supabase غير مكتملة. راجع ملف config.js.','error'); return;
     }
     state.client=window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey);
     $('#loginForm').addEventListener('submit',login); $('#logoutBtn').addEventListener('click',logout); $('#refreshBtn').addEventListener('click',()=>loadSection(state.section)); $('#homeBtn').addEventListener('click',showHome); $('#enterSystemBtn').addEventListener('click',showLogin);
