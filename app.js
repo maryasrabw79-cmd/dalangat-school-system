@@ -63,8 +63,29 @@
     say('#sectionMsg','');
     const {data,error}=await state.client.from('profiles').select('id,full_name,role,created_at').order('created_at',{ascending:false}).limit(500);
     if(error){$('#tableHead').innerHTML='';$('#tableBody').innerHTML='';say('#sectionMsg','تعذر تحميل المستخدمين: '+error.message,'error');return;}
-    $('#tableHead').innerHTML='<tr><th>اسم العضو</th><th>الصلاحية</th><th>تاريخ الإضافة</th></tr>';
-    $('#tableBody').innerHTML=(data||[]).length?(data||[]).map(u=>'<tr><td>'+esc(u.full_name||'—')+'</td><td>'+esc(humanRole(u.role||'employee'))+'</td><td>'+esc(u.created_at?new Date(u.created_at).toLocaleDateString('ar-EG'):'—')+'</td></tr>').join(''):'<tr><td class="empty" colspan="3">لا يوجد مستخدمون.</td></tr>';
+    $('#tableHead').innerHTML='<tr><th>اسم العضو</th><th>الصلاحية</th><th>تاريخ الإضافة</th><th>الإجراء</th></tr>';
+    $('#tableBody').innerHTML=(data||[]).length?(data||[]).map(u=>'<tr><td>'+esc(u.full_name||'—')+'</td><td>'+esc(humanRole(u.role||'employee'))+'</td><td>'+esc(u.created_at?new Date(u.created_at).toLocaleDateString('ar-EG'):'—')+'</td><td>'+(u.id===state.user.id?'<span>حسابك الحالي</span>':'<button type="button" class="secondary remove-user-btn" data-user-id="'+esc(u.id)+'" data-user-name="'+esc(u.full_name||u.id)+'">إزالة العضو</button>')+'</td></tr>').join(''):'<tr><td class="empty" colspan="4">لا يوجد مستخدمون.</td></tr>';
+    $('#tableBody').querySelectorAll('.remove-user-btn').forEach(btn=>btn.addEventListener('click',removeManagedUser));
+  }
+  async function removeManagedUser(e){
+    const btn=e.currentTarget;
+    if(!admin()){say('#sectionMsg','غير مسموح: إزالة الأعضاء لمدير النظام فقط.','error');return;}
+    const userId=btn.dataset.userId, userName=btn.dataset.userName||'هذا العضو';
+    if(!userId||userId===state.user.id)return;
+    if(!window.confirm('هل تريد إزالة العضو «'+userName+'» نهائيًا من حسابات المنظومة؟ لن يتم حذف سجلات المدرسة المرتبطة به تلقائيًا.'))return;
+    if(!window.confirm('تأكيد أخير: سيتم حذف حساب الدخول لهذا العضو. هل تريد المتابعة؟'))return;
+    btn.disabled=true;btn.textContent='جارٍ الإزالة...';say('#sectionMsg','جارٍ إزالة الحساب...');
+    try{
+      const {data,error}=await state.client.functions.invoke('admin-remove-user',{body:{user_id:userId}});
+      if(error)throw error;
+      if(data?.error)throw new Error(data.error);
+      say('#sectionMsg',data?.message||'تمت إزالة العضو.','success');
+      await renderUsers();
+    }catch(err){
+      console.error('Remove user error:',err);
+      say('#sectionMsg','تعذر إزالة العضو: '+(err?.message||String(err)),'error');
+      btn.disabled=false;btn.textContent='إزالة العضو';
+    }
   }
   async function createManagedUser(e){
     e.preventDefault();
