@@ -66,12 +66,12 @@ Deno.serve(async (req: Request) => {
       .eq("employment_status", "على رأس العمل").order("full_name").limit(1000);
     if (staffError) return json({ error: "تعذر تحميل سجل العاملين لإصدار الرموز." }, 500);
 
-    const codes: Array<{ employee_no: string | null; full_name: string; activation_code: string }> = [];
+    const codes: Array<{ employee_no: string | null; full_name: string; national_id_suffix: string; activation_code: string }> = [];
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
     for (const staff of (staffRows || [])) {
       const fullName = String(staff.full_name || "").trim();
       const nationalId = String(staff.national_id || "").trim();
-      if (!fullName || fullName === "موظف جديد" || !/^\d{14}$/.test(nationalId)) continue;
+      if (!/^\d{14}$/.test(nationalId)) continue;
       const code = generateCode();
       const codeHash = await hashCode(code);
       const { data: updated, error: updateError } = await adminClient.from("staff")
@@ -79,7 +79,7 @@ Deno.serve(async (req: Request) => {
         .eq("id", staff.id).is("auth_user_id", null).is("activation_used_at", null)
         .select("id").maybeSingle();
       if (updateError) return json({ error: "حدث خطأ أثناء حفظ رموز التفعيل. راجع مدير النظام." }, 500);
-      if (updated) codes.push({ employee_no: staff.employee_no || null, full_name: fullName, activation_code: code });
+      if (updated) codes.push({ employee_no: staff.employee_no || null, full_name: fullName && fullName !== "موظف جديد" ? fullName : "بدون اسم مسجل", national_id_suffix: nationalId.slice(-4), activation_code: code });
     }
     return json({ ok: true, expires_at: expiresAt, codes });
   }
