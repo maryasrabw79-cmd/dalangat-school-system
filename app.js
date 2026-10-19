@@ -25,7 +25,20 @@
     const {data:{session}}=await state.client.auth.getSession(); if(session?.user){state.user=session.user;await loadProfile();} else showLogin();
   }
   function showLogin(){ $('#loginView').classList.remove('hidden'); $('#appView').classList.add('hidden'); $('#logoutBtn').classList.add('hidden'); }
-  async function login(e){ e.preventDefault(); say('#loginMsg','جارٍ تسجيل الدخول...'); const {error}=await state.client.auth.signInWithPassword({email:$('#loginEmail').value.trim(),password:$('#loginPassword').value}); if(error) say('#loginMsg','تعذر الدخول: '+error.message,'error'); else say('#loginMsg','تم تسجيل الدخول.','success'); }
+  async function login(e){
+    e.preventDefault();
+    const button=$('#loginForm button[type="submit"]');
+    if(!state.client){say('#loginMsg','لم يتم الاتصال بخدمة تسجيل الدخول. حدّث الصفحة، وإذا استمرت المشكلة أرسل لي نص الرسالة.','error');return;}
+    if(button){button.disabled=true;button.textContent='جارٍ التحقق...';}
+    say('#loginMsg','جارٍ التحقق من بيانات الدخول...');
+    try{
+      const {data,error}=await state.client.auth.signInWithPassword({email:$('#loginEmail').value.trim(),password:$('#loginPassword').value});
+      if(error){say('#loginMsg','تعذر الدخول: '+error.message,'error');return;}
+      if(data?.user){say('#loginMsg','تم التحقق من الحساب، جارٍ تحميل صلاحياته...','success');}
+      else{say('#loginMsg','لم يتم تسجيل الدخول. تأكد من البريد الإلكتروني وكلمة المرور.','error');}
+    }catch(err){console.error('Login error:',err);say('#loginMsg','حدث خطأ أثناء محاولة الدخول: '+(err?.message||String(err)),'error');}
+    finally{if(button){button.disabled=false;button.textContent='دخول';}}
+  }
   async function logout(){await state.client.auth.signOut();}
   async function loadProfile(){
     const {data,error}=await state.client.from('profiles').select('*').eq('id',state.user.id).maybeSingle();
