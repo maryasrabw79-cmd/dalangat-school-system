@@ -45,7 +45,7 @@
     if(button){button.disabled=true;button.textContent='جارٍ التحقق...';}
     say('#loginMsg','جارٍ التحقق من بيانات الدخول...');
     try{
-      const nationalId=$('#loginNationalId').value.trim(); if(!/^\\d{14}$/.test(nationalId)){say('#loginMsg','الرقم القومي يجب أن يتكون من 14 رقمًا.','error');return;} const {data,error}=await state.client.auth.signInWithPassword({email:staffLoginEmail(nationalId),password:$('#loginPassword').value});
+      const loginId=$('#loginNationalId').value.trim(); const email=/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(loginId)?loginId.toLowerCase():(/^\\d{14}$/.test(loginId)?staffLoginEmail(loginId):''); if(!email){say('#loginMsg','اكتب رقمًا قوميًّا من 14 رقمًا، أو البريد الإلكتروني المعتمد لمدير النظام.','error');return;} const {data,error}=await state.client.auth.signInWithPassword({email,password:$('#loginPassword').value});
       if(error){say('#loginMsg','تعذر الدخول: '+error.message,'error');return;}
       if(data?.user){say('#loginMsg','تم التحقق من الحساب، جارٍ تحميل صلاحياته...','success');}
       else{say('#loginMsg','لم يتم تسجيل الدخول. تأكد من الرقم القومي وكلمة المرور، أو فعّل حسابك أولًا.','error');}
@@ -65,7 +65,7 @@
     e.preventDefault();
     const form=e.currentTarget,btn=form.querySelector('button[type="submit"]');
     const nationalId=$('#registerNationalId').value.trim(),code=$('#activationCode').value.trim(),password=$('#registerPassword').value,confirm=$('#registerPasswordConfirm').value;
-    if(!/^\\d{14}$/.test(nationalId)){say('#registerMsg','الرقم القومي يجب أن يتكون من 14 رقمًا.','error');return;}
+    if(!/^\d{14}$/.test(nationalId)){say('#registerMsg','الرقم القومي يجب أن يتكون من 14 رقمًا.','error');return;}
     if(code.length<12){say('#registerMsg','اكتب رمز التفعيل كاملًا كما تسلمته من المدير.','error');return;}
     if(password.length<8){say('#registerMsg','كلمة المرور يجب ألا تقل عن 8 أحرف.','error');return;}
     if(password!==confirm){say('#registerMsg','كلمتا المرور غير متطابقتين.','error');return;}
@@ -254,7 +254,7 @@
     $('#saveNationalIds').addEventListener('click',()=>previewNationalIdRows(true)); $('#issueActivationCodes').addEventListener('click',issueActivationCodes);
   }
   async function previewNationalIdRows(save){
-    const out=$('#bulkIdPreview');out.className='message';out.textContent='جارٍ مطابقة الأسماء والتحقق من الأرقام...';
+    const out=$('#bulkIdPreview');out.className='message';out.textContent='جارٍ مطابقة الأكواد الوظيفية والتحقق من الأرقام...';
     const lines=$('#bulkNationalIds').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
     if(!lines.length){out.className='message error';out.textContent='أدخل سطرًا واحدًا على الأقل.';return;}
     const {data:staff,error}=await state.client.from('staff').select('id,full_name,employee_no,national_id');
@@ -263,7 +263,7 @@
     const seenIds=new Set(), seenNames=new Set();
     for(let i=0;i<lines.length;i++){
       const parts=lines[i].split('|').map(x=>x.trim());
-      if(parts.length!==2){issues.push('السطر '+(i+1)+': افصل الاسم والرقم القومي بعلامة |');continue;}
+      if(parts.length!==2){issues.push('السطر '+(i+1)+': افصل كود الموظف والرقم القومي بعلامة |');continue;}
       const [name,rawId]=parts, id=rawId.replace(/[\s-]/g,'');
       if(!/^\d{14}$/.test(id)){issues.push('السطر '+(i+1)+': الرقم القومي يجب أن يتكون من 14 رقمًا.');continue;}
       if(seenIds.has(id)){issues.push('السطر '+(i+1)+': الرقم القومي مكرر داخل القائمة.');continue;} seenIds.add(id);
