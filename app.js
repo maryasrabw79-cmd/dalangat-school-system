@@ -4,13 +4,12 @@
   const cfg = window.SCHOOL_DB_CONFIG || {};
   const state = { client:null, user:null, profile:null, role:'viewer', section:'employees', cache:{employees:[],students:[]}, rows:[] };
   const sections = {
-    employees:{title:'العاملون',table:'employees',desc:'سجل بيانات العاملين بالمدرسة.',fields:[
-      ['full_name','الاسم الكامل','text',true],['employee_no','الرقم الوظيفي','text'],['job_title','المسمى الوظيفي','text'],['specialization','التخصص','text'],['qualification','المؤهل','text'],['phone','الهاتف','tel'],['email','البريد الإلكتروني','email'],['hire_date','تاريخ التعيين','date'],['employment_status','الحالة الوظيفية','select',false,['على رأس العمل','إجازة','ندب','انتهت الخدمة']],['notes','ملاحظات','textarea'] ],columns:[['full_name','الاسم'],['employee_no','الرقم الوظيفي'],['job_title','الوظيفة'],['specialization','التخصص'],['phone','الهاتف'],['employment_status','الحالة']]},
+    employees:{title:'العاملون',table:'employees',desc:'سجل بيانات العاملين بالمدرسة.',fields:[['full_name','الاسم الكامل','text',true],['national_id','الرقم القومي','text'],['job_title','المسمى الوظيفي','text'],['specialty','التخصص','text'],['qualification','المؤهل','text'],['phone','الهاتف','tel'],['address','العنوان','text'],['hire_date','تاريخ التعيين','date']],columns:[['full_name','الاسم'],['national_id','الرقم القومي'],['job_title','الوظيفة'],['specialty','التخصص'],['phone','الهاتف'],['hire_date','تاريخ التعيين']]},
     students:{title:'الطالبات',table:'students',desc:'سجل بيانات الطالبات وقيدهن.',fields:[['full_name','اسم الطالبة','text',true],['student_number','رقم الطالبة','text'],['grade','الصف الدراسي','select',true,['الأول','الثاني','الثالث']],['section','الفصل','text'],['specialty','التخصص','text'],['phone','هاتف الطالبة','tel'],['guardian_phone','هاتف ولي الأمر','tel'],['status','حالة القيد','select',false,['مقيدة','منقطعة','محولة','متخرجة']],['notes','ملاحظات','textarea']],columns:[['full_name','اسم الطالبة'],['student_number','رقم الطالبة'],['grade','الصف'],['section','الفصل'],['specialty','التخصص'],['status','الحالة']]},
     attendance:{title:'الحضور والغياب',table:'attendance',desc:'تسجيل حضور الطالبات أو غيابهن.',fields:[['student_id','الطالبة','select',true,'students'],['attendance_date','التاريخ','date',true],['status','الحالة','select',true,['حضور','غياب','تأخير','إذن']],['notes','ملاحظات','textarea']],columns:[['student_name','الطالبة'],['attendance_date','التاريخ'],['status','الحالة'],['notes','ملاحظات']]},
     leaves:{title:'الإجازات',table:'leaves',desc:'تسجيل ومتابعة إجازات العاملين.',fields:[['employee_id','العامل','select',true,'employees'],['leave_type','نوع الإجازة','select',true,['اعتيادية','عارضة','مرضية','بدون مرتب','أخرى']],['start_date','من تاريخ','date',true],['end_date','إلى تاريخ','date',true],['status','حالة الطلب','select',true,['قيد المراجعة','مقبولة','مرفوضة']],['notes','ملاحظات','textarea']],columns:[['employee_name','العامل'],['leave_type','نوع الإجازة'],['start_date','من'],['end_date','إلى'],['status','الحالة'],['notes','ملاحظات']]},
     training_courses:{title:'التدريب',table:'training_courses',desc:'إدارة الدورات التدريبية ومتابعتها.',fields:[['title','اسم الدورة','text',true],['provider','الجهة المنظمة','text'],['start_date','تاريخ البداية','date'],['end_date','تاريخ النهاية','date'],['duration_days','المدة بالأيام','number'],['participants','المشاركون','text'],['notes','ملاحظات','textarea']],columns:[['title','الدورة'],['provider','الجهة المنظمة'],['start_date','البداية'],['end_date','النهاية'],['duration_days','المدة'],['participants','المشاركون']]},
-    staff_schedules:{title:'الجداول',table:'staff_schedules',desc:'إدارة الجداول المدرسية والحصص.',fields:[['day_of_week','اليوم','select',true,['السبت','الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس']],['period_no','رقم الحصة','number',true],['class_name','الفصل','text',true],['subject','المادة','text',true],['employee_id','المعلم/المعلمة','select',false,'employees'],['notes','ملاحظات','textarea']],columns:[['day_of_week','اليوم'],['period_no','الحصة'],['class_name','الفصل'],['subject','المادة'],['employee_name','المعلم/المعلمة'],['notes','ملاحظات']]}
+    staff_schedules:{title:'الجداول',table:'staff_schedules',desc:'إدارة الجداول المدرسية والحصص.',fields:[['day_of_week','اليوم','select',true,['السبت','الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس']],['period_no','رقم الحصة','number',true],['class_or_location','الفصل / المكان','text',true],['subject','المادة','text',true],['employee_id','المعلم/المعلمة','select',false,'employees'],['notes','ملاحظات','textarea']],columns:[['day_of_week','اليوم'],['period_no','الحصة'],['class_or_location','الفصل / المكان'],['subject','المادة'],['employee_name','المعلم/المعلمة'],['notes','ملاحظات']]}
   };
   const admin = () => ['admin','manager','principal'].includes(state.role);
   const say = (id,msg,type='') => { const el=$(id); if(el){el.textContent=msg;el.className='message '+type;} };
@@ -45,33 +44,15 @@
     for(const f of sec.fields){const [name,,type,,extra]=f;if(type==='select' && (extra==='employees'||extra==='students')){const list=await getOptions(extra);const select=$(`[name="${name}"]`);if(select)select.innerHTML='<option value="">اختر...</option>'+list.map(r=>`<option value="${esc(r.id)}">${esc(r.full_name)}</option>`).join('');}}
     $('#recordForm').addEventListener('submit',e=>saveRecord(e,sec));}
   async function loadSection(key){const sec=sections[key];if(!sec)return;$('#sectionTitle').textContent=sec.title;$('#sectionDesc').textContent=sec.desc;say('#sectionMsg','');await renderForm(sec);
-    const selectCols={employees:employees: {
-  title: 'العاملون',
-  table: 'employees',
-  desc: 'سجل بيانات العاملين بالمدرسة.',
-  fields: [
-    ['full_name', 'الاسم الكامل', 'text', true],
-    ['national_id', 'الرقم القومي', 'text'],
-    ['job_title', 'المسمى الوظيفي', 'text'],
-    ['specialty', 'التخصص', 'text'],
-    ['qualification', 'المؤهل', 'text'],
-    ['phone', 'الهاتف', 'tel'],
-    ['address', 'العنوان', 'text'],
-    ['hire_date', 'تاريخ التعيين', 'date']
-  ],
-  columns: [
-    ['full_name', 'الاسم'],
-    ['national_id', 'الرقم القومي'],
-    ['job_title', 'الوظيفة'],
-    ['specialty', 'التخصص'],
-    ['phone', 'الهاتف'],
-    ['hire_date', 'تاريخ التعيين']
-  ]
-},
+    const selectCols={employees:'id,full_name,national_id,job_title,specialty,qualification,phone,address,hire_date,created_at',students:'*',attendance:'id,student_id,attendance_date,status,notes,created_at',leaves:'*',training_courses:'*',staff_schedules:'id,day_of_week,period_no,class_or_location,subject,employee_id,notes,created_at'};
+    const {data,error}=await state.client.from(sec.table).select(selectCols[key]||'*').order('created_at',{ascending:false}).limit(500);
+    if(error){say('#sectionMsg','تعذر تحميل البيانات: '+error.message,'error');$('#tableHead').innerHTML='';$('#tableBody').innerHTML='';return;}
+    const rows=data||[];await enrichRows(key,rows);state.rows=rows;renderRows(sec,rows);
+  }
   async function enrichRows(key,rows){const idKey=key==='leaves'?'employee_id':key==='staff_schedules'?'employee_id':'student_id';const ids=[...new Set(rows.map(r=>r[idKey]).filter(Boolean).map(String))];if(!ids.length)return;const table=(key==='attendance')?'students':'employees';const {data}=await state.client.from(table).select('id,full_name').in('id',ids);const names=new Map((data||[]).map(x=>[String(x.id),x.full_name]));rows.forEach(r=>{if(key==='attendance')r.student_name=r.student_name||names.get(String(r.student_id))||'—';else r.employee_name=r.employee_name||names.get(String(r.employee_id))||'—';});}
   function renderRows(sec,rows){const head=$('#tableHead'),body=$('#tableBody');head.innerHTML='<tr>'+sec.columns.map(c=>`<th>${esc(c[1])}</th>`).join('')+'</tr>';if(!rows.length){body.innerHTML=`<tr><td class="empty" colspan="${sec.columns.length}">لا توجد سجلات لعرضها.</td></tr>`;return;}body.innerHTML=rows.map(r=>'<tr>'+sec.columns.map(([key])=>`<td>${esc(r[key]??'—')}</td>`).join('')+'</tr>').join('');}
   async function saveRecord(e,sec){e.preventDefault();say('#sectionMsg','جارٍ الحفظ...');const form=new FormData(e.currentTarget);const data={};for(const f of sec.fields){const [name,,type]=f;const val=form.get(name);if(val!==null&&String(val).trim()!=='')data[name]=type==='number'?Number(val):String(val).trim();}
-    if(sec.table==='attendance'){const {data:stu}=await state.client.from('students').select('full_name,student_number').eq('id',data.student_id).maybeSingle();if(stu){data.student_name=stu.full_name;data.student_number=stu.student_number||null;}}
+    if(sec.table==='attendance'){delete data.student_name;delete data.student_number;}
     if(sec.table==='leaves'||sec.table==='staff_schedules'){const {data:emp}=await state.client.from('employees').select('full_name').eq('id',data.employee_id).maybeSingle();if(emp)data.employee_name=emp.full_name;}
     const {error}=await state.client.from(sec.table).insert(data);if(error){say('#sectionMsg','لم يتم الحفظ: '+error.message,'error');return;}e.currentTarget.reset();say('#sectionMsg','تم حفظ السجل بنجاح.','success');await loadSection(state.section);await loadStats();}
   init().catch(e=>{console.error(e);showLogin();say('#loginMsg','حدث خطأ في تشغيل المنظومة: '+(e.message||e),'error');});
