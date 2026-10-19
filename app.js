@@ -20,7 +20,7 @@
       showLogin(); say('#loginMsg','إعدادات Supabase غير مكتملة. راجع ملف config.js.','error'); return;
     }
     state.client=window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey);
-    $('#loginForm').addEventListener('submit',login); $('#registerForm').addEventListener('submit',registerAccount); $('#showRegisterBtn').addEventListener('click',showRegister); $('#backToLoginBtn').addEventListener('click',showLogin); $('#logoutBtn').addEventListener('click',logout); $('#refreshBtn').addEventListener('click',()=>loadSection(state.section)); $('#homeBtn').addEventListener('click',showHome); $('#exportSelectedBtn').addEventListener('click',()=>exportReportsToExcel($('#exportSectionSelect').value));
+    $('#loginForm').addEventListener('submit',login); $('#registerForm').addEventListener('submit',activateAccount); $('#showRegisterBtn').addEventListener('click',showRegister); $('#backToLoginBtn').addEventListener('click',showLogin); $('#logoutBtn').addEventListener('click',logout); $('#refreshBtn').addEventListener('click',()=>loadSection(state.section)); $('#homeBtn').addEventListener('click',showHome); $('#exportSelectedBtn').addEventListener('click',()=>exportReportsToExcel($('#exportSectionSelect').value));
     $('#homeTabs').querySelectorAll('[data-home-section]').forEach(b=>b.addEventListener('click',()=>openHomeSelection(b.dataset.homeSection)));
     state.client.auth.onAuthStateChange((_event,session)=>{ if(session?.user){ state.user=session.user; setTimeout(loadProfile,0); } else { state.user=null; state.profile=null; showLogin(); }});
     const {data:{session}}=await state.client.auth.getSession(); if(session?.user){state.user=session.user;await loadProfile();} else showHome();
@@ -45,30 +45,37 @@
     if(button){button.disabled=true;button.textContent='جارٍ التحقق...';}
     say('#loginMsg','جارٍ التحقق من بيانات الدخول...');
     try{
-      const {data,error}=await state.client.auth.signInWithPassword({email:$('#loginEmail').value.trim(),password:$('#loginPassword').value});
+      const nationalId=$('#loginNationalId').value.trim(); if(!/^\\d{14}$/.test(nationalId)){say('#loginMsg','الرقم القومي يجب أن يتكون من 14 رقمًا.','error');return;} const {data,error}=await state.client.auth.signInWithPassword({email:staffLoginEmail(nationalId),password:$('#loginPassword').value});
       if(error){say('#loginMsg','تعذر الدخول: '+error.message,'error');return;}
       if(data?.user){say('#loginMsg','تم التحقق من الحساب، جارٍ تحميل صلاحياته...','success');}
-      else{say('#loginMsg','لم يتم تسجيل الدخول. تأكد من البريد الإلكتروني وكلمة المرور.','error');}
+      else{say('#loginMsg','لم يتم تسجيل الدخول. تأكد من الرقم القومي وكلمة المرور، أو فعّل حسابك أولًا.','error');}
     }catch(err){console.error('Login error:',err);say('#loginMsg','حدث خطأ أثناء محاولة الدخول: '+(err?.message||String(err)),'error');}
     finally{if(button){button.disabled=false;button.textContent='دخول';}}
   }
-  async function registerAccount(e){
+  function staffLoginEmail(nationalId){return 'staff_'+nationalId+'@login.dalangat-school.com';}
+  async function callAccessFunction(payload,token=null){
+    const headers={'Content-Type':'application/json','apikey':cfg.supabaseAnonKey};
+    if(token)headers.Authorization='Bearer '+token;
+    const response=await fetch(cfg.supabaseUrl+'/functions/v1/staff-account-access',{method:'POST',headers,body:JSON.stringify(payload)});
+    const result=await response.json().catch(()=>({error:'استجابة غير مفهومة من خادم التفعيل.'}));
+    if(!response.ok)throw new Error(result.error||'تعذر تنفيذ الطلب.');
+    return result;
+  }
+  async function activateAccount(e){
     e.preventDefault();
-    const form=e.currentTarget, btn=form.querySelector('button[type="submit"]');
-    const fullName=$('#registerName').value.trim(), email=$('#registerEmail').value.trim().toLowerCase(), password=$('#registerPassword').value, confirm=$('#registerPasswordConfirm').value;
-    if(fullName.length<2){say('#registerMsg','اكتب الاسم كاملًا.','error');return;}
+    const form=e.currentTarget,btn=form.querySelector('button[type="submit"]');
+    const nationalId=$('#registerNationalId').value.trim(),code=$('#activationCode').value.trim(),password=$('#registerPassword').value,confirm=$('#registerPasswordConfirm').value;
+    if(!/^\\d{14}$/.test(nationalId)){say('#registerMsg','الرقم القومي يجب أن يتكون من 14 رقمًا.','error');return;}
+    if(code.length<12){say('#registerMsg','اكتب رمز التفعيل كاملًا كما تسلمته من المدير.','error');return;}
     if(password.length<8){say('#registerMsg','كلمة المرور يجب ألا تقل عن 8 أحرف.','error');return;}
     if(password!==confirm){say('#registerMsg','كلمتا المرور غير متطابقتين.','error');return;}
-    btn.disabled=true;btn.textContent='جارٍ إنشاء الحساب...';say('#registerMsg','جارٍ إنشاء الحساب...');
+    btn.disabled=true;btn.textContent='جارٍ تفعيل الحساب...';say('#registerMsg','جارٍ التحقق من رمز التفعيل وإنشاء الحساب...');
     try{
-      const {data,error}=await state.client.auth.signUp({email,password,options:{data:{full_name:fullName},emailRedirectTo:'https://maryasrabw79-cmd.github.io/dalangat-school-system/'}});
-      if(error)throw error;
-      form.reset();
-      if(data?.session){await state.client.auth.signOut();}
-      showLogin();
-      say('#loginMsg','تم إنشاء الحساب. سيظل بانتظار موافقة مدير النظام قبل استخدام المنظومة. إذا طلب منك تأكيد البريد الإلكتروني، افتح رسالة التأكيد أولًا.','success');
-    }catch(err){console.error('Self registration error:',err);say('#registerMsg','تعذر إنشاء الحساب: '+(err?.message||String(err)),'error');}
-    finally{btn.disabled=false;btn.textContent='إنشاء الحساب';}
+      await callAccessFunction({action:'activate',national_id:nationalId,activation_code:code,password});
+      form.reset();showLogin();$('#loginNationalId').value=nationalId;
+      say('#loginMsg','تم تفعيل الحساب. يمكنك الآن الدخول بالرقم القومي وكلمة المرور التي أنشأتها.','success');
+    }catch(err){console.error('Account activation error:',err);say('#registerMsg','تعذر تفعيل الحساب: '+(err?.message||String(err)),'error');}
+    finally{btn.disabled=false;btn.textContent='تفعيل الحساب وإنشاء كلمة المرور';}
   }
   async function logout(){await state.client.auth.signOut();showHome();}
   async function loadProfile(){
@@ -240,11 +247,11 @@
 
   async function renderNationalIdsForm(){
     $('#sectionTitle').textContent='إضافة الأرقام القومية دفعة واحدة';
-    $('#sectionDesc').textContent='نموذج إداري مستقل لإضافة الأرقام القومية إلى سجلات العاملين الموجودة.';
+    $('#sectionDesc').textContent='أضف الأرقام القومية إلى سجلات العاملين، ثم أنشئ رموز تفعيل آمنة للحسابات التي لم تُفعّل بعد.';
     $('#tableHead').innerHTML='';$('#tableBody').innerHTML='';say('#sectionMsg','');
-    $('#formHost').innerHTML=`<div class="bulk-id-help"><p><strong>طريقة الإدخال:</strong> اكتب كل موظف في سطر بالشكل التالي:</p><p><code>اسم الموظف | الرقم القومي</code></p><p>مثال توضيحي: <code>منى أحمد محمد | 12345678901234</code></p><p>يجب أن يكون الاسم مطابقًا تمامًا للاسم المسجل في تبويب العاملون، والرقم القومي 14 رقمًا. لن يتم تحديث الأسماء غير المطابقة أو المكررة، ولن تُستبدل أرقام موجودة بالفعل.</p><label for="bulkNationalIds">قائمة الأسماء والأرقام القومية</label><textarea id="bulkNationalIds" rows="12" placeholder="اسم الموظف الأول | 12345678901234&#10;اسم الموظف الثاني | 23456789012345"></textarea><div class="form-actions"><button id="previewNationalIds" type="button" class="secondary">معاينة المطابقة</button><button id="saveNationalIds" type="button">حفظ الأرقام المطابقة</button></div><div id="bulkIdPreview" class="message" aria-live="polite"></div></div>`;
+    $('#formHost').innerHTML=`<div class="bulk-id-help"><p><strong>طريقة الإدخال:</strong> سطر لكل موظف بالشكل: <code>كود الموظف | الرقم القومي</code>. استخدم كود الموظف المسجل في تبويب العاملون لتحديد السجل الصحيح حتى لو تكرر الاسم.</p><p>مثال توضيحي: <code>EMP-001 | 12345678901234</code></p><label for="bulkNationalIds">أكواد الموظفين والأرقام القومية</label><textarea id="bulkNationalIds" rows="10" placeholder="EMP-001 | 12345678901234&#10;EMP-002 | 23456789012345"></textarea><div class="form-actions"><button id="previewNationalIds" type="button" class="secondary">معاينة الأكواد</button><button id="saveNationalIds" type="button">حفظ الأرقام القومية</button><button id="issueActivationCodes" type="button">إصدار رموز التفعيل</button></div><div id="bulkIdPreview" class="message" aria-live="polite"></div><div id="activationCodesResult" class="message" aria-live="polite"></div></div>`;
     $('#previewNationalIds').addEventListener('click',()=>previewNationalIdRows(false));
-    $('#saveNationalIds').addEventListener('click',()=>previewNationalIdRows(true));
+    $('#saveNationalIds').addEventListener('click',()=>previewNationalIdRows(true)); $('#issueActivationCodes').addEventListener('click',issueActivationCodes);
   }
   async function previewNationalIdRows(save){
     const out=$('#bulkIdPreview');out.className='message';out.textContent='جارٍ مطابقة الأسماء والتحقق من الأرقام...';
@@ -260,17 +267,17 @@
       const [name,rawId]=parts, id=rawId.replace(/[\s-]/g,'');
       if(!/^\d{14}$/.test(id)){issues.push('السطر '+(i+1)+': الرقم القومي يجب أن يتكون من 14 رقمًا.');continue;}
       if(seenIds.has(id)){issues.push('السطر '+(i+1)+': الرقم القومي مكرر داخل القائمة.');continue;} seenIds.add(id);
-      const matches=staff.filter(r=>String(r.full_name||'').trim()===name);
-      if(matches.length!==1){issues.push('السطر '+(i+1)+': الاسم '+name+' '+(matches.length?'مكرر في سجل العاملين':'غير موجود في سجل العاملين')+'.');continue;}
+      const matches=staff.filter(r=>String(r.employee_no||'').trim()===name);
+      if(matches.length!==1){issues.push('السطر '+(i+1)+': كود الموظف '+name+' '+(matches.length?'مكرر في سجل العاملين':'غير موجود في سجل العاملين')+'.');continue;}
       const row=matches[0];
       if(row.national_id && String(row.national_id).trim()!==id){issues.push('السطر '+(i+1)+': يوجد رقم قومي مسجل بالفعل للموظف '+name+'، ولم يتم تغييره.');continue;}
       if(staff.some(r=>r.id!==row.id&&String(r.national_id||'').trim()===id)){issues.push('السطر '+(i+1)+': الرقم القومي مسجل لموظف آخر.');continue;}
       if(seenNames.has(row.id)){issues.push('السطر '+(i+1)+': الموظف مكرر في القائمة.');continue;} seenNames.add(row.id);
-      parsed.push({id:row.id,name:row.full_name,national_id:id});
+      parsed.push({id:row.id,name:row.full_name,employee_no:row.employee_no,national_id:id});
     }
     if(!save){
       out.className='message '+(issues.length?'error':'success');
-      out.textContent='عدد السجلات المطابقة والجاهزة: '+parsed.length+'. '+(issues.length?'ملاحظات: '+issues.join(' | '):'كل الأسطر مطابقة ويمكن حفظها.');
+      out.textContent='عدد السجلات المطابقة بالكود الوظيفي والجاهزة: '+parsed.length+'. '+(issues.length?'ملاحظات: '+issues.join(' | '):'كل الأسطر مطابقة ويمكن حفظها.');
       return;
     }
     if(!parsed.length){out.className='message error';out.textContent='لا توجد سجلات صالحة للحفظ. '+issues.join(' | ');return;}
@@ -286,6 +293,18 @@
     }finally{button.disabled=false;}
   }
 
+  async function issueActivationCodes(){
+    const out=$('#activationCodesResult'),button=$('#issueActivationCodes');
+    out.className='message';out.textContent='جارٍ إصدار رموز التفعيل للحسابات غير المفعلة...';button.disabled=true;
+    try{
+      const {data:{session}}=await state.client.auth.getSession();
+      if(!session?.access_token)throw new Error('انتهت جلسة الدخول. سجّل الدخول مرة أخرى.');
+      const result=await callAccessFunction({action:'issue_codes'},session.access_token);
+      out.className='message success';
+      out.textContent=result.codes?.length?'احتفظ بهذه الرموز وسلّم كل رمز لصاحبه مباشرة. لن تظهر الرموز مرة أخرى بعد إغلاق هذه الرسالة. صلاحيتها 7 أيام. '+result.codes.map(x=>x.employee_no+' — '+x.full_name+' — '+x.activation_code).join(' | '):'لا توجد حسابات جديدة جاهزة لإصدار رموز لها. أضف الأرقام القومية أولًا وتأكد أن الحسابات لم تُفعّل من قبل.';
+    }catch(err){out.className='message error';out.textContent='تعذر إصدار الرموز: '+(err?.message||String(err));}
+    finally{button.disabled=false;}
+  }
   async function loadSection(key){
     if(key==='national_ids'){if(!admin()){say('#sectionMsg','هذا النموذج متاح لمدير النظام فقط.','error');return;}await renderNationalIdsForm();return;}
     if(key==='users'){if(!admin()){say('#sectionMsg','ليس لديك صلاحية إدارة المستخدمين.','error');return;}await renderUsers();return;}
