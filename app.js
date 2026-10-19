@@ -248,7 +248,7 @@
   }
   async function previewNationalIdRows(save){
     const out=$('#bulkIdPreview');out.className='message';out.textContent='جارٍ مطابقة الأسماء والتحقق من الأرقام...';
-    const lines=$('#bulkNationalIds').value.split(/\\r?\\n/).map(x=>x.trim()).filter(Boolean);
+    const lines=$('#bulkNationalIds').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
     if(!lines.length){out.className='message error';out.textContent='أدخل سطرًا واحدًا على الأقل.';return;}
     const {data:staff,error}=await state.client.from('staff').select('id,full_name,employee_no,national_id');
     if(error){out.className='message error';out.textContent='تعذر قراءة سجل العاملين: '+error.message;return;}
@@ -257,8 +257,8 @@
     for(let i=0;i<lines.length;i++){
       const parts=lines[i].split('|').map(x=>x.trim());
       if(parts.length!==2){issues.push('السطر '+(i+1)+': افصل الاسم والرقم القومي بعلامة |');continue;}
-      const [name,rawId]=parts, id=rawId.replace(/[\\s-]/g,'');
-      if(!/^\\d{14}$/.test(id)){issues.push('السطر '+(i+1)+': الرقم القومي يجب أن يتكون من 14 رقمًا.');continue;}
+      const [name,rawId]=parts, id=rawId.replace(/[\s-]/g,'');
+      if(!/^\d{14}$/.test(id)){issues.push('السطر '+(i+1)+': الرقم القومي يجب أن يتكون من 14 رقمًا.');continue;}
       if(seenIds.has(id)){issues.push('السطر '+(i+1)+': الرقم القومي مكرر داخل القائمة.');continue;} seenIds.add(id);
       const matches=staff.filter(r=>String(r.full_name||'').trim()===name);
       if(matches.length!==1){issues.push('السطر '+(i+1)+': الاسم '+name+' '+(matches.length?'مكرر في سجل العاملين':'غير موجود في سجل العاملين')+'.');continue;}
