@@ -14,19 +14,20 @@
   const admin = () => state.role === 'admin';
   const say = (id,msg,type='') => { const el=$(id); if(el){el.textContent=msg;el.className='message '+type;} };
   const esc = (v) => String(v ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const humanRole = r => ({admin:'مدير النظام',manager:'إدارة المدرسة',principal:'مدير المدرسة',viewer:'عرض فقط',employee:'موظف'})[r] || r;
+  const humanRole = r => ({admin:'مدير النظام',manager:'إدارة المدرسة',principal:'مدير المدرسة',viewer:'عرض فقط',employee:'موظف',pending:'بانتظار موافقة المدير'})[r] || r;
   async function init(){
     if(!window.supabase || !cfg.supabaseUrl || !cfg.supabaseAnonKey || cfg.supabaseUrl.includes('YOUR-PROJECT')){
       showLogin(); say('#loginMsg','إعدادات Supabase غير مكتملة. راجع ملف config.js.','error'); return;
     }
     state.client=window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey);
-    $('#loginForm').addEventListener('submit',login); $('#logoutBtn').addEventListener('click',logout); $('#refreshBtn').addEventListener('click',()=>loadSection(state.section)); $('#homeBtn').addEventListener('click',showHome); $('#exportSelectedBtn').addEventListener('click',()=>exportReportsToExcel($('#exportSectionSelect').value));
+    $('#loginForm').addEventListener('submit',login); $('#registerForm').addEventListener('submit',registerAccount); $('#showRegisterBtn').addEventListener('click',showRegister); $('#backToLoginBtn').addEventListener('click',showLogin); $('#logoutBtn').addEventListener('click',logout); $('#refreshBtn').addEventListener('click',()=>loadSection(state.section)); $('#homeBtn').addEventListener('click',showHome); $('#exportSelectedBtn').addEventListener('click',()=>exportReportsToExcel($('#exportSectionSelect').value));
     $('#homeTabs').querySelectorAll('[data-home-section]').forEach(b=>b.addEventListener('click',()=>openHomeSelection(b.dataset.homeSection)));
     state.client.auth.onAuthStateChange((_event,session)=>{ if(session?.user){ state.user=session.user; setTimeout(loadProfile,0); } else { state.user=null; state.profile=null; showLogin(); }});
     const {data:{session}}=await state.client.auth.getSession(); if(session?.user){state.user=session.user;await loadProfile();} else showHome();
   }
   function showHome(){ $('#homeView').classList.remove('hidden'); $('#loginView').classList.add('hidden'); $('#appView').classList.add('hidden'); $('#logoutBtn').classList.toggle('hidden',!state.user); $('#homeBtn').classList.remove('hidden'); }
-  function showLogin(){ $('#homeView').classList.add('hidden'); $('#loginView').classList.remove('hidden'); $('#appView').classList.add('hidden'); $('#logoutBtn').classList.add('hidden'); $('#homeBtn').classList.remove('hidden'); }
+  function showLogin(){ $('#homeView').classList.add('hidden'); $('#registerView').classList.add('hidden'); $('#loginView').classList.remove('hidden'); $('#appView').classList.add('hidden'); $('#logoutBtn').classList.add('hidden'); $('#homeBtn').classList.remove('hidden'); }
+  function showRegister(){ $('#homeView').classList.add('hidden'); $('#loginView').classList.add('hidden'); $('#registerView').classList.remove('hidden'); $('#appView').classList.add('hidden'); $('#logoutBtn').classList.add('hidden'); $('#homeBtn').classList.remove('hidden'); say('#registerMsg',''); }
   async function openHomeSelection(key){
     const action=key==='export'?'export':key;
     if(!state.user||!state.profile){state.pendingAction=action;showLogin();return;}
@@ -51,12 +52,36 @@
     }catch(err){console.error('Login error:',err);say('#loginMsg','حدث خطأ أثناء محاولة الدخول: '+(err?.message||String(err)),'error');}
     finally{if(button){button.disabled=false;button.textContent='دخول';}}
   }
+  async function registerAccount(e){
+    e.preventDefault();
+    const form=e.currentTarget, btn=form.querySelector('button[type="submit"]');
+    const fullName=$('#registerName').value.trim(), email=$('#registerEmail').value.trim().toLowerCase(), password=$('#registerPassword').value, confirm=$('#registerPasswordConfirm').value;
+    if(fullName.length<2){say('#registerMsg','اكتب الاسم كاملًا.','error');return;}
+    if(password.length<8){say('#registerMsg','كلمة المرور يجب ألا تقل عن 8 أحرف.','error');return;}
+    if(password!==confirm){say('#registerMsg','كلمتا المرور غير متطابقتين.','error');return;}
+    btn.disabled=true;btn.textContent='جارٍ إنشاء الحساب...';say('#registerMsg','جارٍ إنشاء الحساب...');
+    try{
+      const {data,error}=await state.client.auth.signUp({email,password,options:{data:{full_name:fullName},emailRedirectTo:'https://maryasrabw79-cmd.github.io/dalangat-school-system/'}});
+      if(error)throw error;
+      form.reset();
+      if(data?.session){await state.client.auth.signOut();}
+      showLogin();
+      say('#loginMsg','تم إنشاء الحساب. سيظل بانتظار موافقة مدير النظام قبل استخدام المنظومة. إذا طلب منك تأكيد البريد الإلكتروني، افتح رسالة التأكيد أولًا.','success');
+    }catch(err){console.error('Self registration error:',err);say('#registerMsg','تعذر إنشاء الحساب: '+(err?.message||String(err)),'error');}
+    finally{btn.disabled=false;btn.textContent='إنشاء الحساب';}
+  }
   async function logout(){await state.client.auth.signOut();showHome();}
   async function loadProfile(){
     const {data,error}=await state.client.from('profiles').select('*').eq('id',state.user.id).maybeSingle();
     if(error){ showLogin();say('#loginMsg','تعذر قراءة صلاحيات الحساب: '+error.message,'error');return; }
     if(!data){showLogin();say('#loginMsg','تم الدخول، لكن لا يوجد سجل لهذا الحساب في profiles. اطلب من مسؤول النظام ربط الحساب بملف وصلاحية.','error');return;}
     state.profile=data;state.role=String(data.role||'viewer').toLowerCase();
+    if(state.role==='pending'){
+      await state.client.auth.signOut();
+      showLogin();
+      say('#loginMsg','حسابك مسجل بنجاح لكنه ينتظر موافقة مدير النظام. ستتمكن من الدخول بعد اعتماد الحساب.','error');
+      return;
+    }
     $('#loginView').classList.add('hidden');$('#appView').classList.remove('hidden');$('#logoutBtn').classList.remove('hidden');$('#welcomeTitle').textContent='أهلًا بك في منظومة المدرسة';$('#roleLabel').textContent='صلاحيتك: '+humanRole(state.role);
     renderTabs(); await loadStats(); const requested=state.pendingAction; state.pendingAction=null; if(requested==='export'){showExportOptions();return;} if(requested&&requested!=='users'&&sections[requested]&&allowedSections().includes(requested))state.section=requested; else if(requested==='users'&&admin())state.section='users'; if(!allowedSections().includes(state.section))state.section=allowedSections()[0]||'employees'; renderTabs(); $('#exportView').classList.add('hidden'); $('#dataView').classList.remove('hidden'); await loadSection(state.section);
   }
@@ -64,20 +89,30 @@
   function renderTabs(){ const nav=$('#tabs');nav.innerHTML=''; const allowed=allowedSections(); if(!allowed.length){nav.innerHTML='<span>لا توجد أقسام متاحة لهذا الحساب.</span>';return;} if(!allowed.includes(state.section))state.section=allowed[0]; allowed.forEach(key=>{const b=document.createElement('button');b.className='tab'+(key===state.section?' active':'');b.textContent=key==='users'?'إدارة المستخدمين':sections[key].title;b.onclick=()=>{state.section=key;renderTabs();loadSection(key);};nav.appendChild(b);}); }
   async function renderUsers(){
     $('#sectionTitle').textContent='إدارة المستخدمين';
-    $('#sectionDesc').textContent='إنشاء حسابات للأعضاء وإرسال دعوة آمنة للبريد الإلكتروني وتحديد الصلاحيات.';
-    $('#formHost').innerHTML=`<form id="userForm" class="form-grid">
+    $('#sectionDesc').textContent='مراجعة الحسابات الجديدة واعتمادها وإدارة صلاحيات المستخدمين.';
+    $('#formHost').innerHTML=`<p>يمكن للموظفين إنشاء حساب بأنفسهم. الحساب الجديد لا يعمل إلا بعد موافقة المدير. ويمكنك الاستمرار في إنشاء الحسابات بالدعوة عند الحاجة.</p><form id="userForm" class="form-grid">
       <label>اسم العضو<input name="full_name" type="text" required maxlength="120" placeholder="الاسم الكامل"></label>
       <label>البريد الإلكتروني<input name="email" type="email" required maxlength="254" placeholder="name@example.com"></label>
       <label>الصلاحية<select name="role" required><option value="employee">موظف</option><option value="admin">مدير النظام</option></select></label>
       <div class="form-actions"><button type="submit">إنشاء الحساب وإرسال الدعوة</button></div>
-    </form><p>سيصل للعضو بريد دعوة لإكمال إعداد كلمة المرور. لا تكتب كلمة مرور العضو هنا.</p>`;
+    </form>`;
     $('#userForm').addEventListener('submit',createManagedUser);
     say('#sectionMsg','');
     const {data,error}=await state.client.from('profiles').select('id,full_name,role,created_at').order('created_at',{ascending:false}).limit(500);
     if(error){$('#tableHead').innerHTML='';$('#tableBody').innerHTML='';say('#sectionMsg','تعذر تحميل المستخدمين: '+error.message,'error');return;}
     $('#tableHead').innerHTML='<tr><th>اسم العضو</th><th>الصلاحية</th><th>تاريخ الإضافة</th><th>الإجراء</th></tr>';
-    $('#tableBody').innerHTML=(data||[]).length?(data||[]).map(u=>'<tr><td>'+esc(u.full_name||'—')+'</td><td>'+esc(humanRole(u.role||'employee'))+'</td><td>'+esc(u.created_at?new Date(u.created_at).toLocaleDateString('ar-EG'):'—')+'</td><td>'+(u.id===state.user.id?'<span>حسابك الحالي</span>':'<button type="button" class="secondary remove-user-btn" data-user-id="'+esc(u.id)+'" data-user-name="'+esc(u.full_name||u.id)+'">إزالة العضو</button>')+'</td></tr>').join(''):'<tr><td class="empty" colspan="4">لا يوجد مستخدمون.</td></tr>';
+    $('#tableBody').innerHTML=(data||[]).length?(data||[]).map(u=>'<tr><td>'+esc(u.full_name||'—')+'</td><td>'+esc(humanRole(u.role||'employee'))+'</td><td>'+esc(u.created_at?new Date(u.created_at).toLocaleDateString('ar-EG'):'—')+'</td><td>'+(u.id===state.user.id?'<span>حسابك الحالي</span>':(u.role==='pending'?'<button type="button" class="approve-user-btn" data-user-id="'+esc(u.id)+'" data-user-name="'+esc(u.full_name||u.id)+'">اعتماد كموظف</button> ':'')+'<button type="button" class="secondary remove-user-btn" data-user-id="'+esc(u.id)+'" data-user-name="'+esc(u.full_name||u.id)+'">إزالة العضو</button>')+'</td></tr>').join(''):'<tr><td class="empty" colspan="4">لا يوجد مستخدمون.</td></tr>';
     $('#tableBody').querySelectorAll('.remove-user-btn').forEach(btn=>btn.addEventListener('click',removeManagedUser));
+    $('#tableBody').querySelectorAll('.approve-user-btn').forEach(btn=>btn.addEventListener('click',approvePendingUser));
+  }
+  async function approvePendingUser(e){
+    const btn=e.currentTarget, userId=btn.dataset.userId, userName=btn.dataset.userName||'المستخدم';
+    if(!admin()||!userId)return;
+    if(!window.confirm('اعتماد حساب «'+userName+'» كموظف والسماح له بالدخول؟'))return;
+    btn.disabled=true;btn.textContent='جارٍ الاعتماد...';
+    const {error}=await state.client.from('profiles').update({role:'employee'}).eq('id',userId).eq('role','pending');
+    if(error){say('#sectionMsg','تعذر اعتماد الحساب: '+error.message,'error');btn.disabled=false;btn.textContent='اعتماد كموظف';return;}
+    say('#sectionMsg','تم اعتماد الحساب كموظف.','success');await renderUsers();
   }
   async function removeManagedUser(e){
     const btn=e.currentTarget;
