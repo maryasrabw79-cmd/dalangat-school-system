@@ -86,3 +86,15 @@ footer{text-align:center;color:#8190a2;font-size:12px;padding:18px 10px 28px}
 .program strong{font-size:15px}
 .home-systems{margin-bottom:25px}
 @media(max-width:560px){.topbar-actions{width:100%}.home-hero{padding:32px 16px}.home-programs{grid-template-columns:1fr;gap:10px}.program{padding:15px}.home-intro,.home-systems{font-size:14px}}
+
+/* Homepage: school identity and simple tab buttons only */
+.home-hero{padding:clamp(26px,4vw,48px) 24px}
+.home-systems{margin-bottom:26px}
+.home-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;max-width:1000px;margin:0 auto}
+.home-tabs button{min-height:58px;padding:14px 12px;border-radius:13px}
+.home-tabs .export-home-tab{background:linear-gradient(135deg,#087f76,#0b665f)}
+.export-controls{display:flex;align-items:end;gap:12px;max-width:760px;margin-top:20px;flex-wrap:wrap}
+.export-controls label{min-width:220px;flex:1}
+.export-controls button{min-height:45px}
+@media(max-width:760px){.home-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:420px){.home-tabs{grid-template-columns:1fr}.home-tabs button{min-height:48px}.export-controls{display:grid;grid-template-columns:1fr}.export-controls label{min-width:0}}
