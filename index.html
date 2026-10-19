@@ -12,10 +12,11 @@
     <section id="appView" class="hidden">
       <div class="welcome panel"><div><h2 id="welcomeTitle">لوحة التحكم</h2><p id="roleLabel"></p></div><div class="stats" id="stats"></div></div>
       <nav id="tabs" class="tabs" aria-label="أقسام المنظومة"></nav>
-      <section class="panel"><div class="section-head"><div><h2 id="sectionTitle">العاملون</h2><p id="sectionDesc"></p></div><button id="refreshBtn" class="secondary">تحديث البيانات</button></div><div id="formHost"></div><div id="sectionMsg" class="message" aria-live="polite"></div><div class="table-wrap"><table><thead id="tableHead"></thead><tbody id="tableBody"></tbody></table></div></section>
+      <section class="panel"><div class="section-head"><div><h2 id="sectionTitle">العاملون</h2><p id="sectionDesc"></p></div><div class="section-actions"><button id="exportExcelBtn" class="secondary" type="button">تصدير تقارير Excel</button><button id="refreshBtn" class="secondary">تحديث البيانات</button></div></div><div id="formHost"></div><div id="sectionMsg" class="message" aria-live="polite"></div><div class="table-wrap"><table><thead id="tableHead"></thead><tbody id="tableBody"></tbody></table></div></section>
     </section>
     <footer>نسخة تشغيل قابلة للتخصيص — لا تضع مفاتيح سرية داخل ملفات الموقع العامة.</footer>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="config.js"></script><script src="app.js?v=1d43aa58"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="config.js"></script><script src="app.js?v=d6cec543"></script>
 </body></html>
