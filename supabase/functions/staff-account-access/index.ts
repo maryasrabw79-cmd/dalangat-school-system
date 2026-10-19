@@ -14,9 +14,19 @@ const loginEmail = (nationalId: string) => `staff_${nationalId}@login.dalangat-s
 const codeAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
 function generateCode(): string {
-  const bytes = new Uint8Array(12);
-  crypto.getRandomValues(bytes);
-  return Array.from(bytes, b => codeAlphabet[b % codeAlphabet.length]).join("");
+  // Rejection sampling avoids modulo bias when mapping random bytes to the alphabet.
+  const limit = Math.floor(256 / codeAlphabet.length) * codeAlphabet.length;
+  let code = "";
+  while (code.length < 12) {
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    for (const b of bytes) {
+      if (b >= limit) continue;
+      code += codeAlphabet[b % codeAlphabet.length];
+      if (code.length === 12) break;
+    }
+  }
+  return code;
 }
 async function hashCode(code: string): Promise<string> {
   const bytes = new TextEncoder().encode(code);
@@ -91,7 +101,7 @@ Deno.serve(async (req: Request) => {
   if (!staff || staff.auth_user_id || staff.activation_used_at ||
       staff.activation_code_hash !== codeHash ||
       !staff.activation_expires_at || new Date(staff.activation_expires_at).getTime() <= now.getTime() ||
-      (staff.employment_status && staff.employment_status !== "على رأس العمل")) {
+      staff.employment_status !== "على رأس العمل") {
     return json({ error: "تعذر التفعيل. تحقق من الرقم القومي والرمز، أو اطلب رمزًا جديدًا من الإدارة." }, 400);
   }
 
@@ -133,6 +143,10 @@ Deno.serve(async (req: Request) => {
   if (linkError || !linked) {
     await adminClient.auth.admin.deleteUser(userId);
     await adminClient.from("profiles").delete().eq("id", userId);
+    // Release the reservation only if the staff record was not linked to any account.
+    // If the database update actually succeeded, auth_user_id is no longer null and this won't reopen the code.
+    await adminClient.from("staff").update({ activation_used_at: null })
+      .eq("id", staff.id).eq("activation_code_hash", codeHash).is("auth_user_id", null);
     return json({ error: "تعذر ربط الحساب بسجل الموظف. تواصل مع مدير النظام." }, 500);
   }
   return json({ ok: true, message: "تم إنشاء حساب الموظف بنجاح." });
