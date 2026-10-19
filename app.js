@@ -2,7 +2,7 @@
   'use strict';
   const $ = (s) => document.querySelector(s);
   const cfg = window.SCHOOL_DB_CONFIG || {};
-  const state = { client:null, user:null, profile:null, role:'viewer', section:'employees', pendingAction:null, cache:{employees:[],students:[]}, rows:[] };
+  const state = { client:null, user:null, profile:null, role:'viewer', section:'employees', pendingAction:null, cache:{employees:[],students:[]}, rows:[], staffRecord:null };
   const sections = {
     employees:{title:'العاملون',table:'staff',desc:'سجل بيانات العاملين بالمدرسة.',fields:[['full_name','اسم الموظف','text',true],['employee_no','الكود','text'],['national_id','الرقم القومي','text'],['birth_date','تاريخ الميلاد','date'],['qualification','المؤهل','text'],['hire_date','تاريخ التعيين','date'],['work_start_date','تاريخ استلام العمل','date'],['specialization','التخصص','text'],['job_title','المسمى الوظيفي','text'],['grade','الدرجة','text'],['grade_date','تاريخ الدرجة','date'],['phone','رقم التليفون','tel'],['marital_status','الحالة الاجتماعية','select',false,['أعزب','متزوج','مطلق','أرمل']],['address','العنوان','textarea']],columns:[['full_name','اسم الموظف'],['employee_no','الكود'],['national_id','الرقم القومي'],['birth_date','تاريخ الميلاد'],['qualification','المؤهل'],['hire_date','تاريخ التعيين'],['work_start_date','تاريخ استلام العمل'],['specialization','التخصص'],['job_title','المسمى الوظيفي'],['grade','الدرجة'],['grade_date','تاريخ الدرجة'],['phone','رقم التليفون'],['marital_status','الحالة الاجتماعية'],['address','العنوان']]},
     students:{title:'الطالبات',table:'students',desc:'سجل بيانات الطالبات وقيدهن.',fields:[['full_name','اسم الطالبة','text',true],['student_code','كود الطالبة','text',true],['grade','الصف الدراسي','select',true,['الأول','الثاني','الثالث']],['section','الفصل','text'],['specialization','التخصص','select',true,['فني تكنولوجيا الحاسبات','فني الأجهزة الإلكترونية','فني الملابس الجاهزة']],['enrollment_status','حالة القيد','select',true,['مقيدة','منقطعة','محولة','متخرجة']],['birth_date','تاريخ الميلاد','date'],['guardian_name','اسم ولي الأمر','text'],['guardian_phone','هاتف ولي الأمر','tel']],columns:[['full_name','اسم الطالبة'],['student_code','كود الطالبة'],['grade','الصف'],['section','الفصل'],['specialization','التخصص'],['enrollment_status','الحالة']]},
@@ -85,7 +85,7 @@
     $('#loginView').classList.add('hidden');$('#appView').classList.remove('hidden');$('#logoutBtn').classList.remove('hidden');$('#welcomeTitle').textContent='أهلًا بك في منظومة المدرسة';$('#roleLabel').textContent='صلاحيتك: '+humanRole(state.role);
     renderTabs(); await loadStats(); const requested=state.pendingAction; state.pendingAction=null; if(requested==='export'){showExportOptions();return;} if(requested&&requested!=='users'&&sections[requested]&&allowedSections().includes(requested))state.section=requested; else if(requested==='users'&&admin())state.section='users'; if(!allowedSections().includes(state.section))state.section=allowedSections()[0]||'employees'; renderTabs(); $('#exportView').classList.add('hidden'); $('#dataView').classList.remove('hidden'); await loadSection(state.section);
   }
-  function allowedSections(){ if(admin())return [...Object.keys(sections),'users']; if(state.role==='employee')return ['students','attendance']; return []; }
+  function allowedSections(){ if(admin())return [...Object.keys(sections),'users']; if(state.role==='employee')return ['employees','leaves','training_courses']; return []; }
   function renderTabs(){ const nav=$('#tabs');nav.innerHTML=''; const allowed=allowedSections(); if(!allowed.length){nav.innerHTML='<span>لا توجد أقسام متاحة لهذا الحساب.</span>';return;} if(!allowed.includes(state.section))state.section=allowed[0]; allowed.forEach(key=>{const b=document.createElement('button');b.className='tab'+(key===state.section?' active':'');b.textContent=key==='users'?'إدارة المستخدمين':sections[key].title;b.onclick=()=>{state.section=key;renderTabs();loadSection(key);};nav.appendChild(b);}); }
   async function renderUsers(){
     $('#sectionTitle').textContent='إدارة المستخدمين';
@@ -225,20 +225,62 @@
   async function loadStats(){const specs=[['staff','العاملون'],['students','الطالبات'],['attendance','سجلات الحضور']];let html='';for(const [t,label] of specs){const {count,error}=await state.client.from(t).select('id',{count:'exact',head:true});html+=`<div class="stat"><strong>${error?'—':(count??0)}</strong><span>${label}</span></div>`;}$('#stats').innerHTML=html;}
   async function getOptions(table){const {data}=await state.client.from(table).select('id,full_name').order('full_name').limit(1000);return data||[];}
   function fieldHTML(f){const [name,label,type='text',required=false,extra]=f;let control='';if(type==='select'){let opts=Array.isArray(extra)?extra.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join(''):'<option value="">جارٍ التحميل...</option>';control=`<select name="${name}" ${required?'required':''}>${name==='status'||name==='employment_status'||name==='grade'||name==='day_of_week'||name==='leave_type'?'<option value="">اختر...</option>':''}${opts}</select>`;}else if(type==='textarea'){control=`<textarea name="${name}" ${required?'required':''}></textarea>`;}else{control=`<input name="${name}" type="${type}" ${required?'required':''} ${type==='number'?'min="0"':''}>`;}return `<label>${esc(label)}${control}</label>`;}
-  async function renderForm(sec){const host=$('#formHost');if(!admin()){host.innerHTML='<p>حسابك يملك صلاحية العرض فقط. لا يمكنك إضافة سجلات.</p>';return;}host.innerHTML=`<form id="recordForm" class="form-grid">${sec.fields.map(fieldHTML).join('')}<div class="form-actions"><button type="submit">حفظ السجل</button></div></form>`;
-    for(const f of sec.fields){const [name,,type,,extra]=f;if(type==='select' && (extra==='staff'||extra==='students')){const list=await getOptions(extra);const select=$(`[name="${name}"]`);if(select)select.innerHTML='<option value="">اختر...</option>'+list.map(r=>`<option value="${esc(r.id)}">${esc(r.full_name)}</option>`).join('');}}
-    $('#recordForm').addEventListener('submit',e=>saveRecord(e,sec));}
-  async function loadSection(key){if(key==='users'){if(!admin()){say('#sectionMsg','ليس لديك صلاحية إدارة المستخدمين.','error');return;}await renderUsers();return;}const sec=sections[key];if(!sec)return;$('#sectionTitle').textContent=sec.title;$('#sectionDesc').textContent=sec.desc;say('#sectionMsg','');await renderForm(sec);
-    const selectCols={employees:'id,full_name,employee_no,national_id,birth_date,qualification,hire_date,work_start_date,specialization,job_title,grade,grade_date,phone,marital_status,address,created_at',students:'*',attendance:'id,student_id,attendance_date,status,notes,created_at',leaves:'*',training_courses:'*',staff_schedules:'*'};
-    const {data,error}=await state.client.from(sec.table).select(selectCols[key]||'*').order('created_at',{ascending:false}).limit(500);
+  async function renderForm(sec){
+    const host=$('#formHost'), employeeMode=!admin()&&state.role==='employee';
+    if(!admin()&&!employeeMode){host.innerHTML='<p>لا تملك صلاحية تعديل هذا القسم.</p>';return;}
+    let fields=sec.fields;
+    if(employeeMode&&sec.table==='staff') fields=sec.fields.filter(f=>f[0]!=='national_id');
+    if(employeeMode&&sec.table==='staff_leaves') fields=sec.fields.filter(f=>!['staff_id','status'].includes(f[0]));
+    if(employeeMode&&sec.table==='training_courses') fields=sec.fields.filter(f=>f[0]!=='staff_id');
+    host.innerHTML=`<form id="recordForm" class="form-grid">${fields.map(fieldHTML).join('')}<div class="form-actions"><button type="submit">${employeeMode&&sec.table==='staff'?'حفظ بياناتي':'حفظ'}</button></div></form>`;
+    for(const f of fields){const [name,,type,,extra]=f;if(type==='select'&&(extra==='staff'||extra==='students')){const list=await getOptions(extra);const select=$(`[name="${name}"]`);if(select)select.innerHTML='<option value="">اختر...</option>'+list.map(r=>`<option value="${esc(r.id)}">${esc(r.full_name)}</option>`).join('');}}
+    if(employeeMode&&sec.table==='staff'&&state.staffRecord){for(const f of fields){const el=$(`[name="${f[0]}"]`);if(el)el.value=state.staffRecord[f[0]]??'';}}
+    $('#recordForm').addEventListener('submit',e=>saveRecord(e,sec));
+  }
+  async function loadSection(key){
+    if(key==='users'){if(!admin()){say('#sectionMsg','ليس لديك صلاحية إدارة المستخدمين.','error');return;}await renderUsers();return;}
+    const sec=sections[key];if(!sec)return;
+    if(!admin()&&!allowedSections().includes(key)){say('#sectionMsg','هذا القسم غير متاح لصلاحية حسابك.','error');return;}
+    $('#sectionTitle').textContent=sec.title;$('#sectionDesc').textContent=sec.desc;say('#sectionMsg','');
+    if(!admin()&&key==='employees'){
+      const {data,error}=await state.client.from('staff').select('id,full_name,employee_no,birth_date,qualification,hire_date,work_start_date,specialization,job_title,grade,grade_date,phone,marital_status,address').eq('auth_user_id',state.user.id).maybeSingle();
+      if(error){say('#sectionMsg','تعذر تحميل بياناتك: '+error.message,'error');return;}
+      state.staffRecord=data||null;
+      if(!data){$('#formHost').innerHTML='<p>لم يتم ربط حسابك بسجل العاملين بعد. يرجى مراجعة مدير النظام.</p>';$('#tableHead').innerHTML='';$('#tableBody').innerHTML='';return;}
+    }
+    if(!admin()&&['leaves','training_courses'].includes(key)&&!state.staffRecord){
+      const {data,error}=await state.client.from('staff').select('id,full_name,employee_no').eq('auth_user_id',state.user.id).maybeSingle();
+      if(error||!data){say('#sectionMsg','لم يتم ربط حسابك بسجل العاملين بعد. يرجى مراجعة مدير النظام.','error');return;}
+      state.staffRecord=data;
+    }
+    await renderForm(sec);
+    const selectCols={employees:admin()?'id,full_name,employee_no,national_id,birth_date,qualification,hire_date,work_start_date,specialization,job_title,grade,grade_date,phone,marital_status,address,created_at':'id,full_name,employee_no,birth_date,qualification,hire_date,work_start_date,specialization,job_title,grade,grade_date,phone,marital_status,address,created_at',students:'*',attendance:'id,student_id,attendance_date,status,notes,created_at',leaves:'*',training_courses:'*',staff_schedules:'*'};
+    let query=state.client.from(sec.table).select(selectCols[key]||'*');
+    if(!admin()&&['leaves','training_courses'].includes(key))query=query.eq('staff_id',state.staffRecord.id);
+    if(!admin()&&key==='employees')query=query.eq('auth_user_id',state.user.id);
+    const {data,error}=await query.order('created_at',{ascending:false}).limit(500);
     if(error){say('#sectionMsg','تعذر تحميل البيانات: '+error.message,'error');$('#tableHead').innerHTML='';$('#tableBody').innerHTML='';return;}
     const rows=data||[];await enrichRows(key,rows);state.rows=rows;renderRows(sec,rows);
   }
   async function enrichRows(key,rows){const idKey=key==='leaves'||key==='training_courses'||key==='staff_schedules'?'staff_id':'student_id';const ids=[...new Set(rows.map(r=>r[idKey]).filter(Boolean).map(String))];if(!ids.length)return;const table=(key==='attendance')?'students':'staff';const {data}=await state.client.from(table).select('id,full_name').in('id',ids);const names=new Map((data||[]).map(x=>[String(x.id),x.full_name]));rows.forEach(r=>{if(key==='attendance')r.student_name=r.student_name||names.get(String(r.student_id))||'—';else r.staff_name=r.staff_name||names.get(String(r.staff_id))||'—';});}
   function renderRows(sec,rows){const head=$('#tableHead'),body=$('#tableBody');head.innerHTML='<tr>'+sec.columns.map(c=>`<th>${esc(c[1])}</th>`).join('')+'</tr>';if(!rows.length){body.innerHTML=`<tr><td class="empty" colspan="${sec.columns.length}">لا توجد سجلات لعرضها.</td></tr>`;return;}body.innerHTML=rows.map(r=>'<tr>'+sec.columns.map(([key])=>`<td>${esc(r[key]??'—')}</td>`).join('')+'</tr>').join('');}
-  async function saveRecord(e,sec){e.preventDefault();say('#sectionMsg','جارٍ الحفظ...');const form=new FormData(e.currentTarget);const data={};for(const f of sec.fields){const [name,,type]=f;const val=form.get(name);if(val!==null&&String(val).trim()!=='')data[name]=type==='number'?Number(val):String(val).trim();}
+  async function saveRecord(e,sec){
+    e.preventDefault();say('#sectionMsg','جارٍ الحفظ...');
+    const form=new FormData(e.currentTarget),employeeMode=!admin()&&state.role==='employee',data={};
+    for(const f of sec.fields){const [name,,type]=f;if(employeeMode&&sec.table==='staff'&&name==='national_id')continue;if(employeeMode&&sec.table==='staff_leaves'&&name==='status')continue;const val=form.get(name);if(val!==null&&String(val).trim()!=='')data[name]=type==='number'?Number(val):String(val).trim();}
     if(sec.table==='attendance'){delete data.student_name;delete data.student_number;}
-    
-    const {error}=await state.client.from(sec.table).insert(data);if(error){say('#sectionMsg','لم يتم الحفظ: '+error.message,'error');return;}e.currentTarget.reset();say('#sectionMsg','تم حفظ السجل بنجاح.','success');await loadSection(state.section);await loadStats();}
+    if(employeeMode){
+      if(!state.staffRecord){say('#sectionMsg','لم يتم ربط حسابك بسجل العاملين.','error');return;}
+      if(sec.table==='staff'){
+        const {error}=await state.client.from('staff').update(data).eq('auth_user_id',state.user.id);
+        if(error){say('#sectionMsg','لم يتم الحفظ: '+error.message,'error');return;}
+        say('#sectionMsg','تم تحديث بياناتك بنجاح.','success');await loadSection(state.section);return;
+      }
+      if(['staff_leaves','training_courses'].includes(sec.table)){data.staff_id=state.staffRecord.id;if(sec.table==='staff_leaves')data.status='قيد المراجعة';}
+    }
+    const {error}=await state.client.from(sec.table).insert(data);
+    if(error){say('#sectionMsg','لم يتم الحفظ: '+error.message,'error');return;}
+    e.currentTarget.reset();say('#sectionMsg','تم حفظ السجل بنجاح.','success');await loadSection(state.section);await loadStats();
+  }
   init().catch(e=>{console.error(e);showLogin();say('#loginMsg','حدث خطأ في تشغيل المنظومة: '+(e.message||e),'error');});
 })();
