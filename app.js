@@ -246,41 +246,51 @@
   }
 
   async function renderNationalIdsForm(){
-    $('#sectionTitle').textContent='إضافة الأرقام القومية المسموح لها بالتسجيل';
-    $('#sectionDesc').textContent='أدخل الأرقام القومية فقط، حتى لو لم تكن لها سجلات في تبويب العاملين. بعد الحفظ يمكن إصدار رموز التفعيل.';
+    $('#sectionTitle').textContent='إضافة الأرقام القومية دفعة واحدة';
+    $('#sectionDesc').textContent='أضف الأرقام القومية إلى سجلات العاملين، ثم أنشئ رموز تفعيل آمنة للحسابات التي لم تُفعّل بعد.';
     $('#tableHead').innerHTML='';$('#tableBody').innerHTML='';say('#sectionMsg','');
-    $('#formHost').innerHTML=`<div class="bulk-id-help"><p><strong>طريقة الإدخال:</strong> اكتب رقمًا قوميًّا من 14 رقمًا في كل سطر. لا تحتاج إلى اسم أو كود موظف أو سجل سابق.</p><p>مثال توضيحي:</p><code>12345678901234<br>23456789012345</code><label for="bulkNationalIds">الأرقام القومية</label><textarea id="bulkNationalIds" rows="10" placeholder="اكتب رقمًا قوميًّا في كل سطر"></textarea><div class="form-actions"><button id="previewNationalIds" type="button" class="secondary">مراجعة الأرقام</button><button id="saveNationalIds" type="button">حفظ قائمة التسجيل</button><button id="issueActivationCodes" type="button">إصدار رموز التفعيل</button></div><div id="bulkIdPreview" class="message" aria-live="polite"></div><div id="activationCodesResult" class="message" aria-live="polite"></div></div>`;
+    $('#formHost').innerHTML=`<div class="bulk-id-help"><p><strong>طريقة الإدخال:</strong> سطر لكل موظف بالشكل: <code>كود الموظف | الرقم القومي</code>. استخدم كود الموظف المسجل في تبويب العاملون لتحديد السجل الصحيح حتى لو تكرر الاسم.</p><p>مثال توضيحي: <code>EMP-001 | 12345678901234</code></p><label for="bulkNationalIds">أكواد الموظفين والأرقام القومية</label><textarea id="bulkNationalIds" rows="10" placeholder="EMP-001 | 12345678901234&#10;EMP-002 | 23456789012345"></textarea><div class="form-actions"><button id="previewNationalIds" type="button" class="secondary">معاينة الأكواد</button><button id="saveNationalIds" type="button">حفظ الأرقام القومية</button><button id="issueActivationCodes" type="button">إصدار رموز التفعيل</button></div><div id="bulkIdPreview" class="message" aria-live="polite"></div><div id="activationCodesResult" class="message" aria-live="polite"></div></div>`;
     $('#previewNationalIds').addEventListener('click',()=>previewNationalIdRows(false));
     $('#saveNationalIds').addEventListener('click',()=>previewNationalIdRows(true)); $('#issueActivationCodes').addEventListener('click',issueActivationCodes);
   }
   async function previewNationalIdRows(save){
-    const out=$('#bulkIdPreview');out.className='message';out.textContent='جارٍ التحقق من الأرقام القومية...';
+    const out=$('#bulkIdPreview');out.className='message';out.textContent='جارٍ مطابقة الأكواد الوظيفية والتحقق من الأرقام...';
     const lines=$('#bulkNationalIds').value.split(/\\r?\\n/).map(x=>x.trim()).filter(Boolean);
-    if(!lines.length){out.className='message error';out.textContent='أدخل رقمًا قوميًّا واحدًا على الأقل.';return;}
-    const parsed=[],issues=[],seen=new Set();
+    if(!lines.length){out.className='message error';out.textContent='أدخل سطرًا واحدًا على الأقل.';return;}
+    const {data:staff,error}=await state.client.from('staff').select('id,full_name,employee_no,national_id');
+    if(error){out.className='message error';out.textContent='تعذر قراءة سجل العاملين: '+error.message;return;}
+    const parsed=[],issues=[];
+    const seenIds=new Set(), seenNames=new Set();
     for(let i=0;i<lines.length;i++){
-      const id=lines[i].replace(/[\\s-]/g,'');
-      if(!/^\\d{14}$/.test(id)){issues.push('السطر '+(i+1)+': يجب أن يتكون الرقم من 14 رقمًا.');continue;}
-      if(seen.has(id)){issues.push('السطر '+(i+1)+': الرقم مكرر داخل القائمة.');continue;}
-      seen.add(id);parsed.push(id);
+      const parts=lines[i].split('|').map(x=>x.trim());
+      if(parts.length!==2){issues.push('السطر '+(i+1)+': افصل كود الموظف والرقم القومي بعلامة |');continue;}
+      const [name,rawId]=parts, id=rawId.replace(/[\\s-]/g,'');
+      if(!/^\\d{14}$/.test(id)){issues.push('السطر '+(i+1)+': الرقم القومي يجب أن يتكون من 14 رقمًا.');continue;}
+      if(seenIds.has(id)){issues.push('السطر '+(i+1)+': الرقم القومي مكرر داخل القائمة.');continue;} seenIds.add(id);
+      const matches=staff.filter(r=>String(r.employee_no||'').trim()===name);
+      if(matches.length!==1){issues.push('السطر '+(i+1)+': كود الموظف '+name+' '+(matches.length?'مكرر في سجل العاملين':'غير موجود في سجل العاملين')+'.');continue;}
+      const row=matches[0];
+      if(row.national_id && String(row.national_id).trim()!==id){issues.push('السطر '+(i+1)+': يوجد رقم قومي مسجل بالفعل للموظف '+name+'، ولم يتم تغييره.');continue;}
+      if(staff.some(r=>r.id!==row.id&&String(r.national_id||'').trim()===id)){issues.push('السطر '+(i+1)+': الرقم القومي مسجل لموظف آخر.');continue;}
+      if(seenNames.has(row.id)){issues.push('السطر '+(i+1)+': الموظف مكرر في القائمة.');continue;} seenNames.add(row.id);
+      parsed.push({id:row.id,name:row.full_name,employee_no:row.employee_no,national_id:id});
     }
-    if(!save){out.className='message '+(issues.length?'error':'success');out.textContent='أرقام صحيحة: '+parsed.length+'. '+(issues.length?'ملاحظات: '+issues.join(' | '):'القائمة سليمة وجاهزة للحفظ.');return;}
-    if(!parsed.length){out.className='message error';out.textContent='لا توجد أرقام صحيحة للحفظ. '+issues.join(' | ');return;}
-    const button=$('#saveNationalIds');button.disabled=true;
-    try{
-      const {data:existing,error:readError}=await state.client.from('allowed_employee_ids').select('national_id');
-      if(readError)throw readError;
-      const known=new Set((existing||[]).map(r=>String(r.national_id)));
-      const fresh=parsed.filter(id=>!known.has(id));
-      let saved=0;
-      if(fresh.length){
-        const {data,error}=await state.client.from('allowed_employee_ids').insert(fresh.map(national_id=>({national_id}))).select('national_id');
-        if(error)throw error;saved=(data||[]).length;
-      }
+    if(!save){
       out.className='message '+(issues.length?'error':'success');
-      out.textContent='تم حفظ '+saved+' رقمًا جديدًا. أرقام كانت مسجلة بالفعل: '+(parsed.length-fresh.length)+'. '+(issues.length?'تم تجاوز: '+issues.join(' | '):'');
-    }catch(e){out.className='message error';out.textContent='تعذر حفظ القائمة: '+(e?.message||'خطأ غير معروف');}
-    finally{button.disabled=false;}
+      out.textContent='عدد السجلات المطابقة بالكود الوظيفي والجاهزة: '+parsed.length+'. '+(issues.length?'ملاحظات: '+issues.join(' | '):'كل الأسطر مطابقة ويمكن حفظها.');
+      return;
+    }
+    if(!parsed.length){out.className='message error';out.textContent='لا توجد سجلات صالحة للحفظ. '+issues.join(' | ');return;}
+    const button=$('#saveNationalIds');button.disabled=true;
+    let saved=0,failed=[];
+    try{
+      for(const row of parsed){
+        const {error:saveError}=await state.client.from('staff').update({national_id:row.national_id}).eq('id',row.id);
+        if(saveError)failed.push(row.name+': '+saveError.message);else saved++;
+      }
+      out.className='message '+(failed.length||issues.length?'error':'success');
+      out.textContent='تم حفظ '+saved+' رقمًا قوميًّا. '+(failed.length?'تعذر حفظ: '+failed.join(' | ')+'. ':'')+(issues.length?'تم تجاوز الأسطر التالية: '+issues.join(' | '):'');
+    }finally{button.disabled=false;}
   }
 
   async function issueActivationCodes(){
