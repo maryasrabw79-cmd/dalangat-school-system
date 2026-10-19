@@ -45,7 +45,7 @@
     if(button){button.disabled=true;button.textContent='جارٍ التحقق...';}
     say('#loginMsg','جارٍ التحقق من بيانات الدخول...');
     try{
-      const loginId=$('#loginNationalId').value.trim(); const email=/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(loginId)?loginId.toLowerCase():(/^\\d{14}$/.test(loginId)?staffLoginEmail(loginId):''); if(!email){say('#loginMsg','اكتب رقمًا قوميًّا من 14 رقمًا، أو البريد الإلكتروني المعتمد لمدير النظام.','error');return;} const {data,error}=await state.client.auth.signInWithPassword({email,password:$('#loginPassword').value});
+      const loginId=$('#loginNationalId').value.trim(); const email=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(loginId)?loginId.toLowerCase():(/^\\d{14}$/.test(loginId)?staffLoginEmail(loginId):''); if(!email){say('#loginMsg','اكتب رقمًا قوميًّا من 14 رقمًا، أو البريد الإلكتروني المعتمد لمدير النظام.','error');return;} const {data,error}=await state.client.auth.signInWithPassword({email,password:$('#loginPassword').value});
       if(error){say('#loginMsg','تعذر الدخول: '+error.message,'error');return;}
       if(data?.user){say('#loginMsg','تم التحقق من الحساب، جارٍ تحميل صلاحياته...','success');}
       else{say('#loginMsg','لم يتم تسجيل الدخول. تأكد من الرقم القومي وكلمة المرور، أو فعّل حسابك أولًا.','error');}
