@@ -290,7 +290,7 @@
         if(saveError)failed.push(id+': '+saveError.message);else saved++;
       }
       out.className='message '+(failed.length||issues.length?'error':'success');
-      out.textContent='تم إنشاء '+saved+' سجل مبدئي. الموجود مسبقًا: '+already+'. '+(failed.length?'تعذر حفظ بعض الأرقام: '+failed.join(' | ')+'. ':'')+(issues.length?' ملاحظات: '+issues.join(' | '):'')+' بعد ذلك اضغط «إصدار رموز التفعيل». ستظهر الأسماء مؤقتًا باسم «موظف جديد» حتى تستكملها الإدارة.';
+      out.textContent='تم إنشاء '+saved+' سجل مبدئي جديد. لم يتم حذف أو استبدال أي رقم قومي محفوظ مسبقًا؛ الموجود مسبقًا: '+already+'. '+(failed.length?'تعذر حفظ بعض الأرقام: '+failed.join(' | ')+'. ':'')+(issues.length?' ملاحظات: '+issues.join(' | '):'')+' بعد ذلك اضغط «إصدار رموز التفعيل». ستظهر الأسماء مؤقتًا باسم «موظف جديد» حتى تستكملها الإدارة.';
     }finally{button.disabled=false;}
   }
 
@@ -333,7 +333,27 @@
     const rows=data||[];await enrichRows(key,rows);state.rows=rows;renderRows(sec,rows);
   }
   async function enrichRows(key,rows){const idKey=key==='leaves'||key==='training_courses'||key==='staff_schedules'?'staff_id':'student_id';const ids=[...new Set(rows.map(r=>r[idKey]).filter(Boolean).map(String))];if(!ids.length)return;const table=(key==='attendance')?'students':'staff';const {data}=await state.client.from(table).select('id,full_name').in('id',ids);const names=new Map((data||[]).map(x=>[String(x.id),x.full_name]));rows.forEach(r=>{if(key==='attendance')r.student_name=r.student_name||names.get(String(r.student_id))||'—';else r.staff_name=r.staff_name||names.get(String(r.staff_id))||'—';});}
-  function renderRows(sec,rows){const head=$('#tableHead'),body=$('#tableBody');head.innerHTML='<tr>'+sec.columns.map(c=>`<th>${esc(c[1])}</th>`).join('')+'</tr>';if(!rows.length){body.innerHTML=`<tr><td class="empty" colspan="${sec.columns.length}">لا توجد سجلات لعرضها.</td></tr>`;return;}body.innerHTML=rows.map(r=>'<tr>'+sec.columns.map(([key])=>`<td>${esc(r[key]??'—')}</td>`).join('')+'</tr>').join('');}
+  function renderRows(sec,rows){
+    const head=$('#tableHead'),body=$('#tableBody'),canDelete=admin()&&['staff','students','staff_leaves','training_courses'].includes(sec.table);
+    head.innerHTML='<tr>'+sec.columns.map(c=>`<th>${esc(c[1])}</th>`).join('')+(canDelete?'<th>إجراء</th>':'')+'</tr>';
+    if(!rows.length){body.innerHTML=`<tr><td class="empty" colspan="${sec.columns.length+(canDelete?1:0)}">لا توجد سجلات لعرضها.</td></tr>`;return;}
+    body.innerHTML=rows.map(r=>'<tr>'+sec.columns.map(([key])=>`<td>${esc(r[key]??'—')}</td>`).join('')+(canDelete?`<td><button type="button" class="secondary delete-record-btn" data-record-id="${esc(r.id)}" data-record-name="${esc(r.full_name||r.student_code||r.course_name||r.leave_type||'هذا السجل')}" data-table="${esc(sec.table)}">إزالة</button></td>`:'')+'</tr>').join('');
+    body.querySelectorAll('.delete-record-btn').forEach(btn=>btn.addEventListener('click',removeRecord));
+  }
+  async function removeRecord(e){
+    const btn=e.currentTarget,table=btn.dataset.table,id=btn.dataset.recordId,name=btn.dataset.recordName||'هذا السجل';
+    const labels={staff:'الموظف',students:'الطالبة',staff_leaves:'الإجازة',training_courses:'سجل التدريب'};
+    if(!admin()||!['staff','students','staff_leaves','training_courses'].includes(table)||!id)return;
+    if(!window.confirm('هل تريد إزالة '+(labels[table]||'السجل')+' «'+name+'» نهائيًا؟ لا يمكن التراجع عن هذا الإجراء.'))return;
+    btn.disabled=true;btn.textContent='جارٍ الإزالة...';
+    const {error}=await state.client.from(table).delete().eq('id',id);
+    if(error){
+      say('#sectionMsg','تعذر إزالة السجل: '+error.message+' قد يكون مرتبطًا بسجلات أخرى.','error');
+      btn.disabled=false;btn.textContent='إزالة';return;
+    }
+    say('#sectionMsg','تمت إزالة السجل المحدد فقط.','success');
+    await loadSection(state.section);await loadStats();
+  }
   async function saveRecord(e,sec){
     e.preventDefault();say('#sectionMsg','جارٍ الحفظ...');
     const form=new FormData(e.currentTarget),employeeMode=!admin()&&state.role==='employee',data={};
