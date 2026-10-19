@@ -21,12 +21,21 @@
     }
     state.client=window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey);
     $('#loginForm').addEventListener('submit',login); $('#logoutBtn').addEventListener('click',logout); $('#refreshBtn').addEventListener('click',()=>loadSection(state.section)); $('#homeBtn').addEventListener('click',showHome); $('#exportSelectedBtn').addEventListener('click',()=>exportReportsToExcel($('#exportSectionSelect').value));
-    $('#homeTabs').querySelectorAll('[data-home-section]').forEach(b=>b.addEventListener('click',()=>{const key=b.dataset.homeSection;state.pendingAction=key==='export'?'export':key;showLogin();}));
+    $('#homeTabs').querySelectorAll('[data-home-section]').forEach(b=>b.addEventListener('click',()=>openHomeSelection(b.dataset.homeSection)));
     state.client.auth.onAuthStateChange((_event,session)=>{ if(session?.user){ state.user=session.user; setTimeout(loadProfile,0); } else { state.user=null; state.profile=null; showLogin(); }});
     const {data:{session}}=await state.client.auth.getSession(); if(session?.user){state.user=session.user;await loadProfile();} else showHome();
   }
-  function showHome(){ $('#homeView').classList.remove('hidden'); $('#loginView').classList.add('hidden'); $('#appView').classList.add('hidden'); $('#logoutBtn').classList.add('hidden'); $('#homeBtn').classList.add('hidden'); }
+  function showHome(){ $('#homeView').classList.remove('hidden'); $('#loginView').classList.add('hidden'); $('#appView').classList.add('hidden'); $('#logoutBtn').classList.toggle('hidden',!state.user); $('#homeBtn').classList.add('hidden'); }
   function showLogin(){ $('#homeView').classList.add('hidden'); $('#loginView').classList.remove('hidden'); $('#appView').classList.add('hidden'); $('#logoutBtn').classList.add('hidden'); $('#homeBtn').classList.remove('hidden'); }
+  async function openHomeSelection(key){
+    const action=key==='export'?'export':key;
+    if(!state.user||!state.profile){state.pendingAction=action;showLogin();return;}
+    if(action==='export'){showExportOptions();$('#homeView').classList.add('hidden');$('#loginView').classList.add('hidden');$('#appView').classList.remove('hidden');$('#logoutBtn').classList.remove('hidden');return;}
+    if(action==='users'&&!admin()){say('#sectionMsg','ليس لديك صلاحية إدارة المستخدمين.','error');return;}
+    if(!sections[action]&&action!=='users')return;
+    if(!allowedSections().includes(action)){say('#sectionMsg','هذا القسم غير متاح لصلاحية حسابك.','error');return;}
+    state.section=action;$('#homeView').classList.add('hidden');$('#loginView').classList.add('hidden');$('#appView').classList.remove('hidden');$('#logoutBtn').classList.remove('hidden');$('#exportView').classList.add('hidden');$('#dataView').classList.remove('hidden');renderTabs();await loadSection(action);
+  }
   function showExportOptions(){ $('#exportView').classList.remove('hidden'); $('#dataView').classList.add('hidden'); const select=$('#exportSectionSelect'); const keys=admin()?[...Object.keys(sections),'users']:allowedSections().filter(k=>k!=='users'); select.innerHTML=keys.map(k=>`<option value="${esc(k)}">${esc(k==='users'?'إدارة المستخدمين':sections[k]?.title||k)}</option>`).join(''); $('#exportMsg').textContent=''; }
   async function login(e){
     e.preventDefault();
