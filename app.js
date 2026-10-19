@@ -45,12 +45,29 @@
     for(const f of sec.fields){const [name,,type,,extra]=f;if(type==='select' && (extra==='employees'||extra==='students')){const list=await getOptions(extra);const select=$(`[name="${name}"]`);if(select)select.innerHTML='<option value="">اختر...</option>'+list.map(r=>`<option value="${esc(r.id)}">${esc(r.full_name)}</option>`).join('');}}
     $('#recordForm').addEventListener('submit',e=>saveRecord(e,sec));}
   async function loadSection(key){const sec=sections[key];if(!sec)return;$('#sectionTitle').textContent=sec.title;$('#sectionDesc').textContent=sec.desc;say('#sectionMsg','');await renderForm(sec);
-    const selectCols={employees:'id,full_name,employee_no,job_title,specialization,phone,employment_status,created_at',students:'id,full_name,student_number,grade,section,specialty,status,created_at',attendance:'id,student_id,student_name,attendance_date,status,notes,created_at',leaves:'id,employee_id,employee_name,leave_type,start_date,end_date,status,notes,created_at',training_courses:'id,title,provider,start_date,end_date,duration_days,participants,notes,created_at',staff_schedules:'id,day_of_week,period_no,class_or_location,subject,employee_id,employee_name,notes,created_at'};
-    let query=state.client.from(sec.table).select(selectCols[key]||'*').order('created_at',{ascending:false}).limit(300);
-    if(state.role==='employee'&&key==='employees'&&state.profile.employee_id)query=query.eq('id',state.profile.employee_id);
-    const {data,error}=await query;if(error){state.rows=[];renderRows(sec,[]);say('#sectionMsg','تعذر تحميل البيانات: '+error.message,'error');return;}state.rows=data||[];
-    if(key==='attendance'||key==='leaves'||key==='staff_schedules')await enrichRows(key,state.rows);
-    renderRows(sec,state.rows);}
+    const selectCols={employees:employees: {
+  title: 'العاملون',
+  table: 'employees',
+  desc: 'سجل بيانات العاملين بالمدرسة.',
+  fields: [
+    ['full_name', 'الاسم الكامل', 'text', true],
+    ['national_id', 'الرقم القومي', 'text'],
+    ['job_title', 'المسمى الوظيفي', 'text'],
+    ['specialty', 'التخصص', 'text'],
+    ['qualification', 'المؤهل', 'text'],
+    ['phone', 'الهاتف', 'tel'],
+    ['address', 'العنوان', 'text'],
+    ['hire_date', 'تاريخ التعيين', 'date']
+  ],
+  columns: [
+    ['full_name', 'الاسم'],
+    ['national_id', 'الرقم القومي'],
+    ['job_title', 'الوظيفة'],
+    ['specialty', 'التخصص'],
+    ['phone', 'الهاتف'],
+    ['hire_date', 'تاريخ التعيين']
+  ]
+},
   async function enrichRows(key,rows){const idKey=key==='leaves'?'employee_id':key==='staff_schedules'?'employee_id':'student_id';const ids=[...new Set(rows.map(r=>r[idKey]).filter(Boolean).map(String))];if(!ids.length)return;const table=(key==='attendance')?'students':'employees';const {data}=await state.client.from(table).select('id,full_name').in('id',ids);const names=new Map((data||[]).map(x=>[String(x.id),x.full_name]));rows.forEach(r=>{if(key==='attendance')r.student_name=r.student_name||names.get(String(r.student_id))||'—';else r.employee_name=r.employee_name||names.get(String(r.employee_id))||'—';});}
   function renderRows(sec,rows){const head=$('#tableHead'),body=$('#tableBody');head.innerHTML='<tr>'+sec.columns.map(c=>`<th>${esc(c[1])}</th>`).join('')+'</tr>';if(!rows.length){body.innerHTML=`<tr><td class="empty" colspan="${sec.columns.length}">لا توجد سجلات لعرضها.</td></tr>`;return;}body.innerHTML=rows.map(r=>'<tr>'+sec.columns.map(([key])=>`<td>${esc(r[key]??'—')}</td>`).join('')+'</tr>').join('');}
   async function saveRecord(e,sec){e.preventDefault();say('#sectionMsg','جارٍ الحفظ...');const form=new FormData(e.currentTarget);const data={};for(const f of sec.fields){const [name,,type]=f;const val=form.get(name);if(val!==null&&String(val).trim()!=='')data[name]=type==='number'?Number(val):String(val).trim();}
