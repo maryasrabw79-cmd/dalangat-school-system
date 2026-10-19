@@ -48,8 +48,8 @@
     $('#loginView').classList.add('hidden');$('#appView').classList.remove('hidden');$('#logoutBtn').classList.remove('hidden');$('#welcomeTitle').textContent='أهلًا بك في منظومة المدرسة';$('#roleLabel').textContent='صلاحيتك: '+humanRole(state.role);
     renderTabs(); await loadStats(); await loadSection(state.section);
   }
-  function allowedSections(){ if(admin())return [...Object.keys(sections),'users']; if(state.role==='viewer')return Object.keys(sections); if(state.role==='employee')return ['employees','training_courses']; return ['employees']; }
-  function renderTabs(){ const nav=$('#tabs');nav.innerHTML=''; const allowed=allowedSections(); if(!allowed.includes(state.section))state.section=allowed[0]; allowed.forEach(key=>{const b=document.createElement('button');b.className='tab'+(key===state.section?' active':'');b.textContent=key==='users'?'إدارة المستخدمين':sections[key].title;b.onclick=()=>{state.section=key;renderTabs();loadSection(key);};nav.appendChild(b);}); }
+  function allowedSections(){ if(admin())return [...Object.keys(sections),'users']; if(state.role==='employee')return ['students','attendance']; return []; }
+  function renderTabs(){ const nav=$('#tabs');nav.innerHTML=''; const allowed=allowedSections(); if(!allowed.length){nav.innerHTML='<span>لا توجد أقسام متاحة لهذا الحساب.</span>';return;} if(!allowed.includes(state.section))state.section=allowed[0]; allowed.forEach(key=>{const b=document.createElement('button');b.className='tab'+(key===state.section?' active':'');b.textContent=key==='users'?'إدارة المستخدمين':sections[key].title;b.onclick=()=>{state.section=key;renderTabs();loadSection(key);};nav.appendChild(b);}); }
   async function renderUsers(){
     $('#sectionTitle').textContent='إدارة المستخدمين';
     $('#sectionDesc').textContent='إنشاء حسابات للأعضاء وإرسال دعوة آمنة للبريد الإلكتروني وتحديد الصلاحيات.';
