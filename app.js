@@ -21,6 +21,7 @@
     }
     state.client=window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey);
     $('#loginForm').addEventListener('submit',login); $('#logoutBtn').addEventListener('click',logout); $('#refreshBtn').addEventListener('click',()=>loadSection(state.section));
+    $('#exportExcelBtn').addEventListener('click',exportReportsToExcel);
     state.client.auth.onAuthStateChange((_event,session)=>{ if(session?.user){ state.user=session.user; setTimeout(loadProfile,0); } else { state.user=null; state.profile=null; showLogin(); }});
     const {data:{session}}=await state.client.auth.getSession(); if(session?.user){state.user=session.user;await loadProfile();} else showLogin();
   }
@@ -102,6 +103,75 @@
       form.reset();await renderUsers();
     }catch(err){console.error('Create user error:',err);say('#sectionMsg','لم يتم إنشاء الحساب. '+(err?.message||String(err))+' — تأكد من نشر وظيفة admin-create-user في Supabase وإعدادها.','error');}
     finally{btn.disabled=false;btn.textContent='إنشاء الحساب وإرسال الدعوة';}
+  }
+  const reportLabels = {
+    id:'المعرّف', full_name:'الاسم الكامل', employee_no:'الرقم الوظيفي', job_title:'المسمى الوظيفي',
+    specialization:'التخصص', qualification:'المؤهل', phone:'الهاتف', email:'البريد الإلكتروني',
+    hire_date:'تاريخ التعيين', employment_status:'حالة العمل', notes:'ملاحظات', created_at:'تاريخ الإضافة',
+    student_code:'كود الطالبة', grade:'الصف الدراسي', section:'الفصل', enrollment_status:'حالة القيد',
+    birth_date:'تاريخ الميلاد', guardian_name:'اسم ولي الأمر', guardian_phone:'هاتف ولي الأمر',
+    student_id:'معرّف الطالبة', student_name:'اسم الطالبة', attendance_date:'تاريخ الحضور', status:'الحالة',
+    staff_id:'معرّف العامل', staff_name:'اسم العامل', leave_type:'نوع الإجازة', start_date:'تاريخ البداية',
+    end_date:'تاريخ النهاية', course_name:'اسم الدورة', provider:'الجهة المنظمة', hours:'عدد الساعات',
+    certificate_no:'رقم الشهادة', day_of_week:'اليوم', period_no:'رقم الحصة', subject_or_task:'المادة / المهمة',
+    class_or_location:'الفصل / المكان', academic_year:'العام الدراسي', role:'الصلاحية'
+  };
+  async function fetchAllRows(table, columns='*'){
+    const all=[]; const batchSize=1000;
+    for(let from=0; ; from+=batchSize){
+      const {data,error}=await state.client.from(table).select(columns).range(from,from+batchSize-1);
+      if(error)throw new Error('تعذر قراءة جدول '+table+': '+error.message);
+      const batch=data||[]; all.push(...batch);
+      if(batch.length<batchSize)break;
+    }
+    return all;
+  }
+  async function exportReportsToExcel(){
+    const btn=$('#exportExcelBtn');
+    if(!window.XLSX){say('#sectionMsg','مكتبة Excel لم تُحمّل. تحقق من اتصال الإنترنت ثم حدّث الصفحة.','error');return;}
+    btn.disabled=true;const oldText=btn.textContent;btn.textContent='جارٍ تجهيز ملف Excel...';
+    say('#sectionMsg','جارٍ جمع بيانات الأقسام المسموح بها وتجهيز ملف Excel...');
+    try{
+      const keys=admin()?Object.keys(sections):allowedSections().filter(k=>k!=='users');
+      const wb=window.XLSX.utils.book_new();
+      for(const key of keys){
+        const sec=sections[key]; if(!sec)continue;
+        let rows=await fetchAllRows(sec.table);
+        if(key==='attendance'||key==='leaves'||key==='training_courses'||key==='staff_schedules'){
+          const isAttendance=key==='attendance';
+          const foreignKey=isAttendance?'student_id':'staff_id';
+          const ids=[...new Set(rows.map(r=>r[foreignKey]).filter(Boolean).map(String))];
+          if(ids.length){
+            const targetTable=isAttendance?'students':'staff';
+            const {data,error}=await state.client.from(targetTable).select('id,full_name').in('id',ids);
+            if(error)throw new Error('تعذر جلب أسماء السجلات المرتبطة: '+error.message);
+            const names=new Map((data||[]).map(r=>[String(r.id),r.full_name||'—']));
+            rows=rows.map(r=>({...r,[isAttendance?'student_name':'staff_name']:names.get(String(r[foreignKey]))||'—'}));
+          }
+        }
+        const preferred=sec.columns.map(([key])=>key);
+        const extras=[...new Set(rows.flatMap(r=>Object.keys(r)))].filter(k=>!preferred.includes(k)&&k!=='id'&&k!=='student_id'&&k!=='staff_id');
+        const cols=[...preferred,...extras];
+        const data=[cols.map(k=>reportLabels[k]||k),...rows.map(r=>cols.map(k=>r[k]===null||r[k]===undefined?'':r[k]))];
+        const ws=window.XLSX.utils.aoa_to_sheet(data);
+        ws['!views']=[{rightToLeft:true}];
+        ws['!cols']=cols.map(k=>({wch:Math.min(32,Math.max(14,(reportLabels[k]||k).length+4))}));
+        window.XLSX.utils.book_append_sheet(wb,ws,sec.title.slice(0,31));
+      }
+      if(admin()){
+        const users=await fetchAllRows('profiles','full_name,role,created_at');
+        const userCols=['full_name','role','created_at'];
+        const userData=[[...userCols.map(k=>reportLabels[k]||k)],...users.map(u=>userCols.map(k=>k==='role'?humanRole(u[k]||'employee'):(u[k]??'')))];
+        const ws=window.XLSX.utils.aoa_to_sheet(userData);ws['!views']=[{rightToLeft:true}];ws['!cols']=[{wch:28},{wch:20},{wch:18}];
+        window.XLSX.utils.book_append_sheet(wb,ws,'إدارة المستخدمين');
+      }
+      const stamp=new Date().toISOString().slice(0,10);
+      window.XLSX.writeFile(wb,'تقارير_مدرسة_الدلنجات_'+stamp+'.xlsx');
+      say('#sectionMsg','تم تجهيز ملف Excel وتنزيله. يحتوي كل قسم في ورقة مستقلة داخل الملف.','success');
+    }catch(err){
+      console.error('Excel export error:',err);
+      say('#sectionMsg','تعذر إنشاء تقرير Excel: '+(err?.message||String(err)),'error');
+    }finally{btn.disabled=false;btn.textContent=oldText;}
   }
   async function loadStats(){const specs=[['staff','العاملون'],['students','الطالبات'],['attendance','سجلات الحضور']];let html='';for(const [t,label] of specs){const {count,error}=await state.client.from(t).select('id',{count:'exact',head:true});html+=`<div class="stat"><strong>${error?'—':(count??0)}</strong><span>${label}</span></div>`;}$('#stats').innerHTML=html;}
   async function getOptions(table){const {data}=await state.client.from(table).select('id,full_name').order('full_name').limit(1000);return data||[];}
