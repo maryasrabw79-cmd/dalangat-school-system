@@ -33,11 +33,11 @@
     if(!state.user||!state.profile){state.pendingAction=action;showLogin();return;}
     if(action==='export'){showExportOptions();$('#homeView').classList.add('hidden');$('#loginView').classList.add('hidden');$('#appView').classList.remove('hidden');$('#logoutBtn').classList.remove('hidden');return;}
     if(action==='users'&&!admin()){say('#sectionMsg','ليس لديك صلاحية إدارة المستخدمين.','error');return;}
-    if(!sections[action]&&action!=='users')return;
+    if(!sections[action]&&action!=='users'&&action!=='national_ids')return;
     if(!allowedSections().includes(action)){say('#sectionMsg','هذا القسم غير متاح لصلاحية حسابك.','error');return;}
     state.section=action;$('#homeView').classList.add('hidden');$('#loginView').classList.add('hidden');$('#appView').classList.remove('hidden');$('#logoutBtn').classList.remove('hidden');$('#exportView').classList.add('hidden');$('#dataView').classList.remove('hidden');renderTabs();await loadSection(action);
   }
-  function showExportOptions(){ $('#exportView').classList.remove('hidden'); $('#dataView').classList.add('hidden'); const select=$('#exportSectionSelect'); const keys=admin()?[...Object.keys(sections),'users']:allowedSections().filter(k=>k!=='users'); select.innerHTML=keys.map(k=>`<option value="${esc(k)}">${esc(k==='users'?'إدارة المستخدمين':sections[k]?.title||k)}</option>`).join(''); $('#exportMsg').textContent=''; }
+  function showExportOptions(){ $('#exportView').classList.remove('hidden'); $('#dataView').classList.add('hidden'); const select=$('#exportSectionSelect'); const keys=admin()?[...Object.keys(sections),'national_ids','users']:allowedSections().filter(k=>k!=='users'); select.innerHTML=keys.map(k=>`<option value="${esc(k)}">${esc(k==='users'?'إدارة المستخدمين':k==='national_ids'?'إضافة الأرقام القومية دفعة واحدة':sections[k]?.title||k)}</option>`).join(''); $('#exportMsg').textContent=''; }
   async function login(e){
     e.preventDefault();
     const button=$('#loginForm button[type="submit"]');
@@ -85,8 +85,8 @@
     $('#loginView').classList.add('hidden');$('#appView').classList.remove('hidden');$('#logoutBtn').classList.remove('hidden');$('#welcomeTitle').textContent='أهلًا بك في منظومة المدرسة';$('#roleLabel').textContent='صلاحيتك: '+humanRole(state.role);
     renderTabs(); await loadStats(); const requested=state.pendingAction; state.pendingAction=null; if(requested==='export'){showExportOptions();return;} if(requested&&requested!=='users'&&sections[requested]&&allowedSections().includes(requested))state.section=requested; else if(requested==='users'&&admin())state.section='users'; if(!allowedSections().includes(state.section))state.section=allowedSections()[0]||'employees'; renderTabs(); $('#exportView').classList.add('hidden'); $('#dataView').classList.remove('hidden'); await loadSection(state.section);
   }
-  function allowedSections(){ if(admin())return [...Object.keys(sections),'users']; if(state.role==='employee')return ['employees','leaves','training_courses']; return []; }
-  function renderTabs(){ const nav=$('#tabs');nav.innerHTML=''; const allowed=allowedSections(); if(!allowed.length){nav.innerHTML='<span>لا توجد أقسام متاحة لهذا الحساب.</span>';return;} if(!allowed.includes(state.section))state.section=allowed[0]; allowed.forEach(key=>{const b=document.createElement('button');b.className='tab'+(key===state.section?' active':'');b.textContent=key==='users'?'إدارة المستخدمين':sections[key].title;b.onclick=()=>{state.section=key;renderTabs();loadSection(key);};nav.appendChild(b);}); }
+  function allowedSections(){ if(admin())return [...Object.keys(sections),'national_ids','users']; if(state.role==='employee')return ['employees','leaves','training_courses']; return []; }
+  function renderTabs(){ const nav=$('#tabs');nav.innerHTML=''; const allowed=allowedSections(); if(!allowed.length){nav.innerHTML='<span>لا توجد أقسام متاحة لهذا الحساب.</span>';return;} if(!allowed.includes(state.section))state.section=allowed[0]; allowed.forEach(key=>{const b=document.createElement('button');b.className='tab'+(key===state.section?' active':'');b.textContent=key==='users'?'إدارة المستخدمين':key==='national_ids'?'إضافة الأرقام القومية':sections[key].title;b.onclick=()=>{state.section=key;renderTabs();loadSection(key);};nav.appendChild(b);}); }
   async function renderUsers(){
     $('#sectionTitle').textContent='إدارة المستخدمين';
     $('#sectionDesc').textContent='مراجعة الحسابات الجديدة واعتمادها وإدارة صلاحيات المستخدمين.';
@@ -237,7 +237,57 @@
     if(employeeMode&&sec.table==='staff'&&state.staffRecord){for(const f of fields){const el=$(`[name="${f[0]}"]`);if(el)el.value=state.staffRecord[f[0]]??'';}}
     $('#recordForm').addEventListener('submit',e=>saveRecord(e,sec));
   }
+
+  async function renderNationalIdsForm(){
+    $('#sectionTitle').textContent='إضافة الأرقام القومية دفعة واحدة';
+    $('#sectionDesc').textContent='نموذج إداري مستقل لإضافة الأرقام القومية إلى سجلات العاملين الموجودة.';
+    $('#tableHead').innerHTML='';$('#tableBody').innerHTML='';say('#sectionMsg','');
+    $('#formHost').innerHTML=`<div class="bulk-id-help"><p><strong>طريقة الإدخال:</strong> اكتب كل موظف في سطر بالشكل التالي:</p><p><code>اسم الموظف | الرقم القومي</code></p><p>مثال توضيحي: <code>منى أحمد محمد | 12345678901234</code></p><p>يجب أن يكون الاسم مطابقًا تمامًا للاسم المسجل في تبويب العاملون، والرقم القومي 14 رقمًا. لن يتم تحديث الأسماء غير المطابقة أو المكررة، ولن تُستبدل أرقام موجودة بالفعل.</p><label for="bulkNationalIds">قائمة الأسماء والأرقام القومية</label><textarea id="bulkNationalIds" rows="12" placeholder="اسم الموظف الأول | 12345678901234&#10;اسم الموظف الثاني | 23456789012345"></textarea><div class="form-actions"><button id="previewNationalIds" type="button" class="secondary">معاينة المطابقة</button><button id="saveNationalIds" type="button">حفظ الأرقام المطابقة</button></div><div id="bulkIdPreview" class="message" aria-live="polite"></div></div>`;
+    $('#previewNationalIds').addEventListener('click',()=>previewNationalIdRows(false));
+    $('#saveNationalIds').addEventListener('click',()=>previewNationalIdRows(true));
+  }
+  async function previewNationalIdRows(save){
+    const out=$('#bulkIdPreview');out.className='message';out.textContent='جارٍ مطابقة الأسماء والتحقق من الأرقام...';
+    const lines=$('#bulkNationalIds').value.split(/\\r?\\n/).map(x=>x.trim()).filter(Boolean);
+    if(!lines.length){out.className='message error';out.textContent='أدخل سطرًا واحدًا على الأقل.';return;}
+    const {data:staff,error}=await state.client.from('staff').select('id,full_name,employee_no,national_id');
+    if(error){out.className='message error';out.textContent='تعذر قراءة سجل العاملين: '+error.message;return;}
+    const parsed=[],issues=[];
+    const seenIds=new Set(), seenNames=new Set();
+    for(let i=0;i<lines.length;i++){
+      const parts=lines[i].split('|').map(x=>x.trim());
+      if(parts.length!==2){issues.push('السطر '+(i+1)+': افصل الاسم والرقم القومي بعلامة |');continue;}
+      const [name,rawId]=parts, id=rawId.replace(/[\\s-]/g,'');
+      if(!/^\\d{14}$/.test(id)){issues.push('السطر '+(i+1)+': الرقم القومي يجب أن يتكون من 14 رقمًا.');continue;}
+      if(seenIds.has(id)){issues.push('السطر '+(i+1)+': الرقم القومي مكرر داخل القائمة.');continue;} seenIds.add(id);
+      const matches=staff.filter(r=>String(r.full_name||'').trim()===name);
+      if(matches.length!==1){issues.push('السطر '+(i+1)+': الاسم '+name+' '+(matches.length?'مكرر في سجل العاملين':'غير موجود في سجل العاملين')+'.');continue;}
+      const row=matches[0];
+      if(row.national_id && String(row.national_id).trim()!==id){issues.push('السطر '+(i+1)+': يوجد رقم قومي مسجل بالفعل للموظف '+name+'، ولم يتم تغييره.');continue;}
+      if(staff.some(r=>r.id!==row.id&&String(r.national_id||'').trim()===id)){issues.push('السطر '+(i+1)+': الرقم القومي مسجل لموظف آخر.');continue;}
+      if(seenNames.has(row.id)){issues.push('السطر '+(i+1)+': الموظف مكرر في القائمة.');continue;} seenNames.add(row.id);
+      parsed.push({id:row.id,name:row.full_name,national_id:id});
+    }
+    if(!save){
+      out.className='message '+(issues.length?'error':'success');
+      out.textContent='عدد السجلات المطابقة والجاهزة: '+parsed.length+'. '+(issues.length?'ملاحظات: '+issues.join(' | '):'كل الأسطر مطابقة ويمكن حفظها.');
+      return;
+    }
+    if(!parsed.length){out.className='message error';out.textContent='لا توجد سجلات صالحة للحفظ. '+issues.join(' | ');return;}
+    const button=$('#saveNationalIds');button.disabled=true;
+    let saved=0,failed=[];
+    try{
+      for(const row of parsed){
+        const {error:saveError}=await state.client.from('staff').update({national_id:row.national_id}).eq('id',row.id);
+        if(saveError)failed.push(row.name+': '+saveError.message);else saved++;
+      }
+      out.className='message '+(failed.length||issues.length?'error':'success');
+      out.textContent='تم حفظ '+saved+' رقمًا قوميًّا. '+(failed.length?'تعذر حفظ: '+failed.join(' | ')+'. ':'')+(issues.length?'تم تجاوز الأسطر التالية: '+issues.join(' | '):'');
+    }finally{button.disabled=false;}
+  }
+
   async function loadSection(key){
+    if(key==='national_ids'){if(!admin()){say('#sectionMsg','هذا النموذج متاح لمدير النظام فقط.','error');return;}await renderNationalIdsForm();return;}
     if(key==='users'){if(!admin()){say('#sectionMsg','ليس لديك صلاحية إدارة المستخدمين.','error');return;}await renderUsers();return;}
     const sec=sections[key];if(!sec)return;
     if(!admin()&&!allowedSections().includes(key)){say('#sectionMsg','هذا القسم غير متاح لصلاحية حسابك.','error');return;}
