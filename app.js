@@ -254,42 +254,43 @@
     $('#saveNationalIds').addEventListener('click',()=>previewNationalIdRows(true)); $('#issueActivationCodes').addEventListener('click',issueActivationCodes);
   }
   async function previewNationalIdRows(save){
-    const out=$('#bulkIdPreview');out.className='message';out.textContent='جارٍ مطابقة الأكواد الوظيفية والتحقق من الأرقام...';
-    const lines=$('#bulkNationalIds').value.split(/\\r?\\n/).map(x=>x.trim()).filter(Boolean);
-    if(!lines.length){out.className='message error';out.textContent='أدخل سطرًا واحدًا على الأقل.';return;}
-    const {data:staff,error}=await state.client.from('staff').select('id,full_name,employee_no,national_id');
-    if(error){out.className='message error';out.textContent='تعذر قراءة سجل العاملين: '+error.message;return;}
-    const parsed=[],issues=[];
-    const seenIds=new Set(), seenNames=new Set();
+    const out=$('#bulkIdPreview');
+    out.className='message';
+    out.textContent='جارٍ فحص الأرقام القومية...';
+    const lines=$('#bulkNationalIds').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+    if(!lines.length){out.className='message error';out.textContent='أدخل رقمًا قوميًا واحدًا على الأقل.';return;}
+    const ids=[],issues=[],seen=new Set();
     for(let i=0;i<lines.length;i++){
-      const parts=lines[i].split('|').map(x=>x.trim());
-      if(parts.length!==2){issues.push('السطر '+(i+1)+': افصل كود الموظف والرقم القومي بعلامة |');continue;}
-      const [name,rawId]=parts, id=rawId.replace(/[\\s-]/g,'');
-      if(!/^\\d{14}$/.test(id)){issues.push('السطر '+(i+1)+': الرقم القومي يجب أن يتكون من 14 رقمًا.');continue;}
-      if(seenIds.has(id)){issues.push('السطر '+(i+1)+': الرقم القومي مكرر داخل القائمة.');continue;} seenIds.add(id);
-      const matches=staff.filter(r=>String(r.employee_no||'').trim()===name);
-      if(matches.length!==1){issues.push('السطر '+(i+1)+': كود الموظف '+name+' '+(matches.length?'مكرر في سجل العاملين':'غير موجود في سجل العاملين')+'.');continue;}
-      const row=matches[0];
-      if(row.national_id && String(row.national_id).trim()!==id){issues.push('السطر '+(i+1)+': يوجد رقم قومي مسجل بالفعل للموظف '+name+'، ولم يتم تغييره.');continue;}
-      if(staff.some(r=>r.id!==row.id&&String(r.national_id||'').trim()===id)){issues.push('السطر '+(i+1)+': الرقم القومي مسجل لموظف آخر.');continue;}
-      if(seenNames.has(row.id)){issues.push('السطر '+(i+1)+': الموظف مكرر في القائمة.');continue;} seenNames.add(row.id);
-      parsed.push({id:row.id,name:row.full_name,employee_no:row.employee_no,national_id:id});
+      const id=lines[i].replace(/[\s-]/g,'');
+      if(!/^\d{14}$/.test(id)){issues.push('السطر '+(i+1)+': يجب أن يتكون الرقم من 14 رقمًا.');continue;}
+      if(seen.has(id)){issues.push('السطر '+(i+1)+': الرقم مكرر في القائمة.');continue;}
+      seen.add(id);ids.push(id);
     }
+    if(!ids.length){out.className='message error';out.textContent=issues.join(' | ')||'لا توجد أرقام صالحة.';return;}
+    const {data:staff,error}=await state.client.from('staff').select('id,national_id,auth_user_id,activation_used_at');
+    if(error){out.className='message error';out.textContent='تعذر قراءة سجل العاملين: '+error.message;return;}
+    const existing=new Set(staff.filter(r=>r.national_id).map(r=>String(r.national_id).trim()));
+    const fresh=ids.filter(id=>!existing.has(id));
+    const already=ids.length-fresh.length;
     if(!save){
       out.className='message '+(issues.length?'error':'success');
-      out.textContent='عدد السجلات المطابقة بالكود الوظيفي والجاهزة: '+parsed.length+'. '+(issues.length?'ملاحظات: '+issues.join(' | '):'كل الأسطر مطابقة ويمكن حفظها.');
+      out.textContent='الأرقام الصحيحة: '+ids.length+'؛ سجلات جديدة ستُنشأ: '+fresh.length+'؛ موجودة مسبقًا: '+already+'. '+(issues.length?'ملاحظات: '+issues.join(' | '):'يمكنك الآن الضغط على «حفظ الأرقام القومية».');
       return;
     }
-    if(!parsed.length){out.className='message error';out.textContent='لا توجد سجلات صالحة للحفظ. '+issues.join(' | ');return;}
+    if(!fresh.length){
+      out.className='message '+(issues.length?'error':'success');
+      out.textContent='لا توجد سجلات جديدة لإضافتها. الموجود مسبقًا: '+already+'. '+(issues.length?issues.join(' | '):'إذا كانت هذه الحسابات غير مفعلة، يمكنك تجربة «إصدار رموز التفعيل».');
+      return;
+    }
     const button=$('#saveNationalIds');button.disabled=true;
-    let saved=0,failed=[];
+    let saved=0;const failed=[];
     try{
-      for(const row of parsed){
-        const {error:saveError}=await state.client.from('staff').update({national_id:row.national_id}).eq('id',row.id);
-        if(saveError)failed.push(row.name+': '+saveError.message);else saved++;
+      for(const id of fresh){
+        const {error:saveError}=await state.client.from('staff').insert({full_name:'موظف جديد',national_id:id,employment_status:'على رأس العمل',notes:'سجل مبدئي أُنشئ من قائمة الأرقام القومية؛ يُستكمل الاسم والبيانات بواسطة الإدارة.'});
+        if(saveError)failed.push(id+': '+saveError.message);else saved++;
       }
       out.className='message '+(failed.length||issues.length?'error':'success');
-      out.textContent='تم حفظ '+saved+' رقمًا قوميًّا. '+(failed.length?'تعذر حفظ: '+failed.join(' | ')+'. ':'')+(issues.length?'تم تجاوز الأسطر التالية: '+issues.join(' | '):'');
+      out.textContent='تم إنشاء '+saved+' سجل مبدئي. الموجود مسبقًا: '+already+'. '+(failed.length?'تعذر حفظ بعض الأرقام: '+failed.join(' | ')+'. ':'')+(issues.length?' ملاحظات: '+issues.join(' | '):'')+' بعد ذلك اضغط «إصدار رموز التفعيل». ستظهر الأسماء مؤقتًا باسم «موظف جديد» حتى تستكملها الإدارة.';
     }finally{button.disabled=false;}
   }
 
