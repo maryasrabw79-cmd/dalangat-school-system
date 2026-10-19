@@ -2,5 +2,5 @@
    لا تضع service_role أو أي مفتاح سري في هذا الملف. */
 window.SCHOOL_DB_CONFIG = {
   supabaseUrl: "https://YOUR-PROJECT.supabase.co",
-  supabaseAnonKey: "YOUR_SUPABASE_ANON_OR_PUBLISHABLE_KEY"
+  supabaseAnonKey: "sb_publishable_h5DJNPrjkeWHQXrDNt54RA_Q94Hphc6"
 };
