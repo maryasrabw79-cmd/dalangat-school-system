@@ -150,7 +150,7 @@
           }
         }
         const preferred=sec.columns.map(([key])=>key);
-        const extras=[...new Set(rows.flatMap(r=>Object.keys(r)))].filter(k=>!preferred.includes(k)&&k!=='id'&&k!=='student_id'&&k!=='staff_id');
+        const extras=key==='employees'?[]:[...new Set(rows.flatMap(r=>Object.keys(r)))].filter(k=>!preferred.includes(k)&&k!=='id'&&k!=='student_id'&&k!=='staff_id');
         const cols=[...preferred,...extras];
         const data=[cols.map(k=>reportLabels[k]||k),...rows.map(r=>cols.map(k=>r[k]===null||r[k]===undefined?'':r[k]))];
         const ws=window.XLSX.utils.aoa_to_sheet(data);
