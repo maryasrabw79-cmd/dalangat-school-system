@@ -64,14 +64,15 @@
   async function activateAccount(e){
     e.preventDefault();
     const form=e.currentTarget,btn=form.querySelector('button[type="submit"]');
-    const nationalId=$('#registerNationalId').value.trim(),password=$('#registerPassword').value,confirm=$('#registerPasswordConfirm').value;
+    const nationalId=$('#registerNationalId').value.trim(),activationCode=$('#registerActivationCode').value.trim().toUpperCase(),password=$('#registerPassword').value,confirm=$('#registerPasswordConfirm').value;
     if(!/^\d{14}$/.test(nationalId)){say('#registerMsg','الرقم القومي يجب أن يتكون من 14 رقمًا.','error');return;}
+    if(!/^[A-HJ-NP-Z2-9]{12}$/.test(activationCode)){say('#registerMsg','أدخل رمز التفعيل المكوّن من 12 حرفًا ورقمًا كما سلّمته لك الإدارة.','error');return;}
     if(password.length<8){say('#registerMsg','كلمة المرور يجب ألا تقل عن 8 أحرف.','error');return;}
     if(password.length>128){say('#registerMsg','كلمة المرور طويلة جدًا.','error');return;}
     if(password!==confirm){say('#registerMsg','كلمتا المرور غير متطابقتين.','error');return;}
     btn.disabled=true;btn.textContent='جارٍ إنشاء الحساب...';say('#registerMsg','جارٍ التحقق من سجل الموظف وإنشاء الحساب...');
     try{
-      await callAccessFunction({action:'activate',national_id:nationalId,password});
+      await callAccessFunction({action:'activate',national_id:nationalId,activation_code:activationCode,password});
       form.reset();showLogin();$('#loginNationalId').value=nationalId;
       say('#loginMsg','تم إنشاء الحساب. يمكنك الآن الدخول بالرقم القومي وكلمة المرور التي اخترتها.','success');
     }catch(err){console.error('Account activation error:',err);say('#registerMsg','تعذر إنشاء الحساب: '+(err?.message||String(err)),'error');}
