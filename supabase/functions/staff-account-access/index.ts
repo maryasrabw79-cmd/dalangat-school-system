@@ -141,10 +141,20 @@ Deno.serve(async (req: Request) => {
     .eq("activation_used_at", now.toISOString()).is("auth_user_id", null)
     .select("id").maybeSingle();
   if (linkError || !linked) {
+    // A network/database error can occur after the UPDATE committed. Verify the actual row
+    // before deleting the newly created auth user or releasing the activation reservation.
+    const { data: currentStaff, error: verifyError } = await adminClient.from("staff")
+      .select("auth_user_id").eq("id", staff.id).maybeSingle();
+    if (verifyError) {
+      return json({ error: "تعذر التأكد من حالة ربط الحساب. لا تعِد المحاولة؛ تواصل مع مدير النظام للتحقق من السجل." }, 500);
+    }
+    if (currentStaff?.auth_user_id === userId) {
+      return json({ ok: true, message: "تم إنشاء حساب الموظف بنجاح." });
+    }
+
     await adminClient.auth.admin.deleteUser(userId);
     await adminClient.from("profiles").delete().eq("id", userId);
-    // Release the reservation only if the staff record was not linked to any account.
-    // If the database update actually succeeded, auth_user_id is no longer null and this won't reopen the code.
+    // Release only our reservation, and only while the employee remains unlinked.
     await adminClient.from("staff").update({ activation_used_at: null })
       .eq("id", staff.id).eq("activation_code_hash", codeHash).is("auth_user_id", null);
     return json({ error: "تعذر ربط الحساب بسجل الموظف. تواصل مع مدير النظام." }, 500);
