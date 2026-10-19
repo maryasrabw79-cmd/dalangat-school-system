@@ -20,12 +20,12 @@
       $('#loginView').classList.remove('hidden'); say('#loginMsg','إعدادات Supabase غير مكتملة. راجع ملف config.js.','error'); return;
     }
     state.client=window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey);
-    $('#loginForm').addEventListener('submit',login); $('#logoutBtn').addEventListener('click',logout); $('#refreshBtn').addEventListener('click',()=>loadSection(state.section));
+    $('#loginForm').addEventListener('submit',login); $('#logoutBtn').addEventListener('click',logout); $('#refreshBtn').addEventListener('click',()=>loadSection(state.section)); $('#homeBtn').addEventListener('click',showHome); $('#enterSystemBtn').addEventListener('click',showLogin);
     $('#exportExcelBtn').addEventListener('click',exportReportsToExcel);
     state.client.auth.onAuthStateChange((_event,session)=>{ if(session?.user){ state.user=session.user; setTimeout(loadProfile,0); } else { state.user=null; state.profile=null; showLogin(); }});
-    const {data:{session}}=await state.client.auth.getSession(); if(session?.user){state.user=session.user;await loadProfile();} else showLogin();
+    const {data:{session}}=await state.client.auth.getSession(); if(session?.user){state.user=session.user;await loadProfile();} else showHome();
   }
-  function showLogin(){ $('#loginView').classList.remove('hidden'); $('#appView').classList.add('hidden'); $('#logoutBtn').classList.add('hidden'); }
+  function showHome(){ $('#homeView').classList.remove('hidden'); $('#loginView').classList.add('hidden'); $('#appView').classList.add('hidden'); $('#logoutBtn').classList.add('hidden'); $('#homeBtn').classList.remove('hidden'); }\n  function showLogin(){ $('#homeView').classList.add('hidden'); $('#loginView').classList.remove('hidden'); $('#appView').classList.add('hidden'); $('#logoutBtn').classList.add('hidden'); $('#homeBtn').classList.remove('hidden'); }
   async function login(e){
     e.preventDefault();
     const button=$('#loginForm button[type="submit"]');
@@ -40,7 +40,7 @@
     }catch(err){console.error('Login error:',err);say('#loginMsg','حدث خطأ أثناء محاولة الدخول: '+(err?.message||String(err)),'error');}
     finally{if(button){button.disabled=false;button.textContent='دخول';}}
   }
-  async function logout(){await state.client.auth.signOut();}
+  async function logout(){await state.client.auth.signOut();showHome();}
   async function loadProfile(){
     const {data,error}=await state.client.from('profiles').select('*').eq('id',state.user.id).maybeSingle();
     if(error){ showLogin();say('#loginMsg','تعذر قراءة صلاحيات الحساب: '+error.message,'error');return; }
