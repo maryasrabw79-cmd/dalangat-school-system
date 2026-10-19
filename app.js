@@ -37,7 +37,7 @@
     if(!allowedSections().includes(action)){say('#sectionMsg','هذا القسم غير متاح لصلاحية حسابك.','error');return;}
     state.section=action;$('#homeView').classList.add('hidden');$('#loginView').classList.add('hidden');$('#appView').classList.remove('hidden');$('#logoutBtn').classList.remove('hidden');$('#exportView').classList.add('hidden');$('#dataView').classList.remove('hidden');renderTabs();await loadSection(action);
   }
-  function showExportOptions(){ $('#exportView').classList.remove('hidden'); $('#dataView').classList.add('hidden'); const select=$('#exportSectionSelect'); const keys=admin()?[...Object.keys(sections),'national_ids','users']:allowedSections().filter(k=>k!=='users'); select.innerHTML=keys.map(k=>`<option value="${esc(k)}">${esc(k==='users'?'إدارة المستخدمين':k==='national_ids'?'إضافة الأرقام القومية دفعة واحدة':sections[k]?.title||k)}</option>`).join(''); $('#exportMsg').textContent=''; }
+  function showExportOptions(){ $('#exportView').classList.remove('hidden'); $('#dataView').classList.add('hidden'); const select=$('#exportSectionSelect'); const keys=admin()?[...Object.keys(sections),'national_ids','users']:allowedSections().filter(k=>k!=='users'); select.innerHTML=keys.map(k=>`<option value="${esc(k)}">${esc(k==='users'?'إدارة المستخدمين':k==='national_ids'?'إضافة الأرقام القومية المسموح لها بالتسجيل':sections[k]?.title||k)}</option>`).join(''); $('#exportMsg').textContent=''; }
   async function login(e){
     e.preventDefault();
     const button=$('#loginForm button[type="submit"]');
@@ -247,9 +247,9 @@
 
   async function renderNationalIdsForm(){
     $('#sectionTitle').textContent='إضافة الأرقام القومية دفعة واحدة';
-    $('#sectionDesc').textContent='أضف الأرقام القومية إلى سجلات العاملين، ثم أنشئ رموز تفعيل آمنة للحسابات التي لم تُفعّل بعد.';
+    $('#sectionDesc').textContent='أدخل الأرقام القومية فقط، كل رقم في سطر مستقل، دون كود موظف أو اسم.';
     $('#tableHead').innerHTML='';$('#tableBody').innerHTML='';say('#sectionMsg','');
-    $('#formHost').innerHTML=`<div class="bulk-id-help"><p><strong>طريقة الإدخال:</strong> سطر لكل موظف بالشكل: <code>كود الموظف | الرقم القومي</code>. استخدم كود الموظف المسجل في تبويب العاملون لتحديد السجل الصحيح حتى لو تكرر الاسم.</p><p>مثال توضيحي: <code>EMP-001 | 12345678901234</code></p><label for="bulkNationalIds">أكواد الموظفين والأرقام القومية</label><textarea id="bulkNationalIds" rows="10" placeholder="EMP-001 | 12345678901234&#10;EMP-002 | 23456789012345"></textarea><div class="form-actions"><button id="previewNationalIds" type="button" class="secondary">معاينة الأكواد</button><button id="saveNationalIds" type="button">حفظ الأرقام القومية</button><button id="issueActivationCodes" type="button">إصدار رموز التفعيل</button></div><div id="bulkIdPreview" class="message" aria-live="polite"></div><div id="activationCodesResult" class="message" aria-live="polite"></div></div>`;
+    $('#formHost').innerHTML=`<div class="bulk-id-help"><p><strong>طريقة الإدخال:</strong> رقم قومي واحد من 14 رقمًا في كل سطر. لا تحتاج إلى كود موظف أو اسم.</p><p>مثال توضيحي: <code>12345678901234</code></p><label for="bulkNationalIds">الأرقام القومية</label><textarea id="bulkNationalIds" rows="10" placeholder="12345678901234&#10229;23456789012345"></textarea><div class="form-actions"><button id="previewNationalIds" type="button" class="secondary">مراجعة الأرقام</button><button id="saveNationalIds" type="button">حفظ الأرقام القومية</button><button id="issueActivationCodes" type="button">إصدار رموز التفعيل</button></div><div id="bulkIdPreview" class="message" aria-live="polite"></div><div id="activationCodesResult" class="message" aria-live="polite"></div></div>`;
     $('#previewNationalIds').addEventListener('click',()=>previewNationalIdRows(false));
     $('#saveNationalIds').addEventListener('click',()=>previewNationalIdRows(true)); $('#issueActivationCodes').addEventListener('click',issueActivationCodes);
   }
