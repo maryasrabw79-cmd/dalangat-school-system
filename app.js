@@ -64,9 +64,9 @@
   async function activateAccount(e){
     e.preventDefault();
     const form=e.currentTarget,btn=form.querySelector('button[type="submit"]');
-    const nationalId=$('#registerNationalId').value.trim(),activationCode=$('#registerActivationCode').value.trim().toUpperCase(),password=$('#registerPassword').value,confirm=$('#registerPasswordConfirm').value;
+    const nationalId=$('#registerNationalId').value.trim(),activationCode=$('#registerActivationCode').value.trim(),password=$('#registerPassword').value,confirm=$('#registerPasswordConfirm').value;
     if(!/^\d{14}$/.test(nationalId)){say('#registerMsg','الرقم القومي يجب أن يتكون من 14 رقمًا.','error');return;}
-    if(!/^[A-HJ-NP-Z2-9]{12}$/.test(activationCode)){say('#registerMsg','أدخل رمز التفعيل المكوّن من 12 حرفًا ورقمًا كما سلّمته لك الإدارة.','error');return;}
+    if(!/^\d{6}$/.test(activationCode)){say('#registerMsg','أدخل رمز التفعيل الرقمي المكوّن من 6 أرقام كما سلّمته لك الإدارة.','error');return;}
     if(password.length<8){say('#registerMsg','كلمة المرور يجب ألا تقل عن 8 أحرف.','error');return;}
     if(password.length>128){say('#registerMsg','كلمة المرور طويلة جدًا.','error');return;}
     if(password!==confirm){say('#registerMsg','كلمتا المرور غير متطابقتين.','error');return;}
@@ -303,7 +303,17 @@
       if(!session?.access_token)throw new Error('انتهت جلسة الدخول. سجّل الدخول مرة أخرى.');
       const result=await callAccessFunction({action:'issue_codes'},session.access_token);
       out.className='message success';
-      out.textContent=result.codes?.length?'احتفظ بهذه الرموز وسلّم كل رمز لصاحبه مباشرة. لن تظهر الرموز مرة أخرى بعد إغلاق هذه الرسالة. صلاحيتها 7 أيام. '+result.codes.map(x=>(x.employee_no||'بدون كود')+' — '+x.full_name+' — الرقم القومي ينتهي بـ '+x.national_id_suffix+' — '+x.activation_code).join(' | '):'لا توجد حسابات جديدة جاهزة لإصدار رموز لها. أضف الأرقام القومية أولًا وتأكد أن الحسابات لم تُفعّل من قبل.';
+      if(result.codes?.length){
+        if(typeof XLSX==='undefined')throw new Error('مكتبة Excel لم تُحمّل. حدّث الصفحة وحاول مرة أخرى.');
+        const rows=result.codes.map((x,i)=>({'مسلسل':i+1,'الرقم القومي':x.national_id||'','رمز التفعيل':x.activation_code}));
+        const sheet=XLSX.utils.json_to_sheet(rows,{header:['مسلسل','الرقم القومي','رمز التفعيل']});
+        sheet['!cols']=[{wch:10},{wch:20},{wch:16}];
+        const book=XLSX.utils.book_new();XLSX.utils.book_append_sheet(book,sheet,'رموز التفعيل');
+        XLSX.writeFile(book,'رموز_تفعيل_الموظفين.xlsx');
+        out.textContent='تم إصدار '+result.codes.length+' رمزًا وتنزيل ملف Excel. صلاحية الرموز 7 أيام، وكل رمز يُستخدم مرة واحدة. احفظ الملف في مكان آمن وسلّم كل رمز لصاحبه فقط.';
+      }else{
+        out.textContent='لا توجد حسابات جديدة جاهزة لإصدار رموز لها. أضف الأرقام القومية أولًا وتأكد أن الحسابات لم تُفعّل من قبل.';
+      }
     }catch(err){out.className='message error';out.textContent='تعذر إصدار الرموز: '+(err?.message||String(err));}
     finally{button.disabled=false;}
   }
