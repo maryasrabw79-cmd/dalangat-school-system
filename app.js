@@ -29,6 +29,10 @@
   function showLogin(){ $('#homeView').classList.add('hidden'); $('#registerView').classList.add('hidden'); $('#loginView').classList.remove('hidden'); $('#appView').classList.add('hidden'); $('#logoutBtn').classList.add('hidden'); $('#homeBtn').classList.remove('hidden'); }
   function showRegister(){ $('#homeView').classList.add('hidden'); $('#loginView').classList.add('hidden'); $('#registerView').classList.remove('hidden'); $('#appView').classList.add('hidden'); $('#logoutBtn').classList.add('hidden'); $('#homeBtn').classList.remove('hidden'); say('#registerMsg',''); }
   async function openHomeSelection(key){
+    if(key==='home'){showHome();return;}
+    if(key==='logout'){if(state.user){await logout();}else{showHome();}return;}
+    const implemented=['employees','students','attendance','leaves','training_courses','staff_schedules','users','export'];
+    if(!implemented.includes(key)){window.alert('هذا القسم ظاهر في الواجهة الجديدة، لكن وظيفته التفصيلية لم تُبرمج بعد.');return;}
     const action=key==='export'?'export':key;
     if(!state.user||!state.profile){state.pendingAction=action;showLogin();return;}
     if(action==='export'){showExportOptions();$('#homeView').classList.add('hidden');$('#loginView').classList.add('hidden');$('#appView').classList.remove('hidden');$('#logoutBtn').classList.remove('hidden');return;}
