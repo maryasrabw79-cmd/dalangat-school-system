@@ -11,22 +11,11 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
   status, headers: { ...corsHeaders, "Content-Type": "application/json", "Cache-Control": "no-store" },
 });
 const loginEmail = (nationalId: string) => `staff_${nationalId}@login.dalangat-school.com`;
-const codeAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-
 function generateCode(): string {
-  // Rejection sampling avoids modulo bias when mapping random bytes to the alphabet.
-  const limit = Math.floor(256 / codeAlphabet.length) * codeAlphabet.length;
-  let code = "";
-  while (code.length < 12) {
-    const bytes = new Uint8Array(16);
-    crypto.getRandomValues(bytes);
-    for (const b of bytes) {
-      if (b >= limit) continue;
-      code += codeAlphabet[b % codeAlphabet.length];
-      if (code.length === 12) break;
-    }
-  }
-  return code;
+  // Six numeric digits; leading zeroes are significant and preserved as text in Excel.
+  const value = new Uint32Array(1);
+  crypto.getRandomValues(value);
+  return String(value[0] % 1_000_000).padStart(6, "0");
 }
 async function hashCode(code: string): Promise<string> {
   const bytes = new TextEncoder().encode(code);
@@ -66,7 +55,7 @@ Deno.serve(async (req: Request) => {
       .eq("employment_status", "على رأس العمل").order("full_name").limit(1000);
     if (staffError) return json({ error: "تعذر تحميل سجل العاملين لإصدار الرموز." }, 500);
 
-    const codes: Array<{ employee_no: string | null; full_name: string; national_id_suffix: string; activation_code: string }> = [];
+    const codes: Array<{ employee_no: string | null; full_name: string; national_id: string; activation_code: string }> = []
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
     for (const staff of (staffRows || [])) {
       const fullName = String(staff.full_name || "").trim();
@@ -79,7 +68,7 @@ Deno.serve(async (req: Request) => {
         .eq("id", staff.id).is("auth_user_id", null).is("activation_used_at", null)
         .select("id").maybeSingle();
       if (updateError) return json({ error: "حدث خطأ أثناء حفظ رموز التفعيل. راجع مدير النظام." }, 500);
-      if (updated) codes.push({ employee_no: staff.employee_no || null, full_name: fullName && fullName !== "موظف جديد" ? fullName : "بدون اسم مسجل", national_id_suffix: nationalId.slice(-4), activation_code: code });
+      if (updated) codes.push({ employee_no: staff.employee_no || null, full_name: fullName && fullName !== "موظف جديد" ? fullName : "بدون اسم مسجل", national_id: nationalId, activation_code: code });
     }
     return json({ ok: true, expires_at: expiresAt, codes });
   }
@@ -88,7 +77,7 @@ Deno.serve(async (req: Request) => {
   const nationalId = String(input.national_id || "").trim();
   const code = String(input.activation_code || "").trim().toUpperCase();
   const password = String(input.password || "");
-  if (!/^\d{14}$/.test(nationalId) || !/^[A-HJ-NP-Z2-9]{12}$/.test(code) || password.length < 8 || password.length > 128) {
+  if (!/^\d{14}$/.test(nationalId) || !/^\d{6}$/.test(code) || password.length < 8 || password.length > 128) {
     return json({ error: "الرقم القومي أو رمز التفعيل أو كلمة المرور غير صحيحة." }, 400);
   }
 
@@ -138,7 +127,7 @@ Deno.serve(async (req: Request) => {
   const { data: linked, error: linkError } = await adminClient.from("staff")
     .update({ auth_user_id: userId, activation_code_hash: null, activation_expires_at: null })
     .eq("id", staff.id).eq("activation_code_hash", codeHash)
-    .eq("activation_used_at", now.toISOString()).is("auth_user_id", null)
+    .not("activation_used_at", "is", null).is("auth_user_id", null)
     .select("id").maybeSingle();
   if (linkError || !linked) {
     // A network/database error can occur after the UPDATE committed. Verify the actual row
