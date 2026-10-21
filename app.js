@@ -112,7 +112,7 @@
     await loadExamResults();
   }
   function examHeader(value){return String(value??'').trim().toLowerCase().replace(/[أإآ]/g,'ا').replace(/[ى]/g,'ي').replace(/[ؤئ]/g,'ء').replace(/[\s_\-\.\/\\()]+/g,'');}
-  function examField(headers,aliases){const wanted=aliases.map(examHeader);return headers.findIndex(h=>wanted.includes(examHeader(h)));}
+  function examField(headers,aliases){const wanted=aliases.map(examHeader);return headers.findIndex(h=>{const value=examHeader(h);return value&&wanted.some(a=>value===a||(a.length>=4&&value.includes(a))||(value.length>=5&&a.includes(value)));});}
   function examCell(row,index){return index<0?'':row[index]===undefined||row[index]===null?'':String(row[index]).trim();}
   function examId(value){const digits=v=>String(v??'').replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/[۰-۹]/g,d=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));if(typeof value==='number'&&Number.isFinite(value))return Number.isInteger(value)&&value>=0?String(value):'';let v=digits(value).trim().replace(/[\u200e\u200f\u061c\u00a0\u200b\u202a-\u202e'’]/g,'').replace(/[٬,]/g,'');if(/^\d+(?:\.\d+)?e[+\-]?\d+$/i.test(v)){const n=Number(v);if(Number.isFinite(n)&&n>=0&&Number.isInteger(n))v=String(n);}if(/^\d+\.0+$/.test(v))v=v.replace(/\.0+$/,'');return v.replace(/[^0-9]/g,'');}
   async function importExamWorkbook(){
@@ -134,7 +134,32 @@
         const ci=examField(candidate,idAliases),cn=examField(candidate,nameAliases);
         if(ci>=0&&cn>=0){headerRow=hi;headers=candidate;idI=ci;nameI=cn;break;}
       }
-      if(headerRow<0)throw new Error('لم أجد صف عناوين يحتوي على عمود للرقم القومي وعمود لاسم الطالبة. تأكد من وجود العنوانين في الشيت؛ باقي الأعمدة وعددها غير محددين ويمكن أن تختلف من ملف لآخر.');
+      // عند اختلاف مسميات العناوين، حاول اكتشاف عمود الرقم القومي من قيمه الفعلية (14 رقمًا)
+      // وعمود الاسم من النصوص المجاورة، بدل رفض الملف مباشرة.
+      if(headerRow<0){
+        let best=null;
+        for(let hi=0;hi<Math.min(grid.length,20);hi++){
+          const candidate=(grid[hi]||[]).map(v=>String(v??'').trim());
+          const width=Math.max(candidate.length,...grid.slice(hi+1,Math.min(grid.length,hi+8)).map(r=>r.length),0);
+          for(let ci=0;ci<width;ci++){
+            let idScore=0;
+            for(let ri=hi+1;ri<Math.min(grid.length,hi+8);ri++)if(/^\d{14}$/.test(examId(grid[ri]?.[ci])))idScore++;
+            if(idScore<1)continue;
+            for(let cn=0;cn<width;cn++){
+              if(cn===ci)continue;
+              let nameScore=0;
+              for(let ri=hi+1;ri<Math.min(grid.length,hi+8);ri++){
+                const val=String(grid[ri]?.[cn]??'').trim();
+                if(val.length>=3&&!/^\d+$/.test(val)&&/[ء-يa-z]/i.test(val))nameScore++;
+              }
+              const score=idScore*3+nameScore;
+              if(nameScore>0&&(!best||score>best.score))best={hi,ci,cn,score,candidate};
+            }
+          }
+        }
+        if(best){headerRow=best.hi;headers=best.candidate.slice();while(headers.length<=Math.max(best.ci,best.cn))headers.push('');idI=best.ci;nameI=best.cn;if(!headers[idI])headers[idI]='الرقم القومي';if(!headers[nameI])headers[nameI]='اسم الطالبة';}
+      }
+      if(headerRow<0)throw new Error('لم أتمكن من تحديد عمود الرقم القومي وعمود اسم الطالبة. تأكد أن الشيت يحتوي على أرقام قومية صحيحة وأسماء طالبات في صفوف البيانات.');
       const gradeI=examField(headers,['الصف','الصف الدراسي','المرحلة','grade','year']),sectionI=examField(headers,['الفصل','الشعبة','section','class']),specI=examField(headers,['التخصص','الشعبة التخصصية','specialization','specialty']),totalI=examField(headers,['المجموع','المجموع الكلي','total','total score','total_score']),maxI=examField(headers,['النهاية العظمى','المجموع النهائي','الدرجة النهائية','max total','max_total','maximum']),pctI=examField(headers,['النسبة','النسبة المئوية','percentage','percent']),statusI=examField(headers,['النتيجة','حالة النتيجة','الحالة','result','result status','result_status']);
       const reserved=new Set([idI,nameI,gradeI,sectionI,specI,totalI,maxI,pctI,statusI].filter(i=>i>=0)),subjectHeaders=headers.map((h,i)=>({h,i})).filter(x=>x.h&&!reserved.has(x.i)),rows=[],errors=[],seen=new Set();
       for(let ri=headerRow+1;ri<grid.length;ri++){
