@@ -159,3 +159,8 @@ body{background:#eaf7f4}
 /* Force compact school logo size, overriding earlier responsive rules */
 .home-hero img.school-emblem-img{width:30px!important;height:30px!important;max-width:30px!important;min-width:30px!important;max-height:30px!important;object-fit:contain!important;float:left!important;margin:4px 8px 4px 2px!important;padding:0!important;}
 @media(max-width:560px){.home-hero img.school-emblem-img{width:28px!important;height:28px!important;max-width:28px!important;min-width:28px!important;max-height:28px!important;float:none!important;display:block!important;margin:0 auto 6px!important;}}
+
+/* Final balanced emblem size requested */
+.home-hero img.school-emblem-img{width:76px!important;height:76px!important;max-width:76px!important;min-width:76px!important;max-height:76px!important;object-fit:contain!important;float:left!important;margin:4px 12px 8px 4px!important;padding:0!important;}
+@media(max-width:900px){.home-hero img.school-emblem-img{width:68px!important;height:68px!important;max-width:68px!important;min-width:68px!important;max-height:68px!important;}}
+@media(max-width:560px){.home-hero img.school-emblem-img{width:58px!important;height:58px!important;max-width:58px!important;min-width:58px!important;max-height:58px!important;float:none!important;display:block!important;margin:0 auto 8px!important;}}
