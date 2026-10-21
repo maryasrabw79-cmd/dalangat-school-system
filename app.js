@@ -125,11 +125,19 @@
     try{
       const book=XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:false}),sheet=book.Sheets[book.SheetNames[0]],grid=XLSX.utils.sheet_to_json(sheet,{header:1,defval:'',raw:false});
       if(grid.length<2)throw new Error('الملف لا يحتوي على صفوف بيانات.');
-      const headers=grid[0].map(v=>String(v??'').trim()),idI=examField(headers,['الرقم القومي','رقم قومي','الرقم القومى','national_id','national id','nationalid','رقم الطالبة القومي']),nameI=examField(headers,['اسم الطالبة','اسم الطالب','الاسم','اسم الطالبه','full_name','student name','name']);
-      if(idI<0||nameI<0)throw new Error('لم أجد عمودي «الرقم القومي» و«اسم الطالبة» في الصف الأول من الشيت.');
+      // ابحث عن صف العناوين ضمن أول 10 صفوف، حتى لو سبقته عناوين أو بيانات المدرسة.
+      const idAliases=['الرقم القومي','رقم قومي','الرقم القومى','رقم الطالبة القومي','الرقم القومي للطالبة','national_id','national id','nationalid','national identity','id number'];
+      const nameAliases=['اسم الطالبة','اسم الطالب','اسم الطالبه','اسم الطالبة بالكامل','الاسم الكامل','اسم الطالبة/الطالب','full_name','student name','studentname','name'];
+      let headerRow=-1,headers=[],idI=-1,nameI=-1;
+      for(let hi=0;hi<Math.min(grid.length,10);hi++){
+        const candidate=(grid[hi]||[]).map(v=>String(v??'').trim());
+        const ci=examField(candidate,idAliases),cn=examField(candidate,nameAliases);
+        if(ci>=0&&cn>=0){headerRow=hi;headers=candidate;idI=ci;nameI=cn;break;}
+      }
+      if(headerRow<0)throw new Error('لم أجد صف عناوين يحتوي على عمود للرقم القومي وعمود لاسم الطالبة. تأكد من وجود العنوانين في الشيت؛ باقي الأعمدة وعددها غير محددين ويمكن أن تختلف من ملف لآخر.');
       const gradeI=examField(headers,['الصف','الصف الدراسي','المرحلة','grade','year']),sectionI=examField(headers,['الفصل','الشعبة','section','class']),specI=examField(headers,['التخصص','الشعبة التخصصية','specialization','specialty']),totalI=examField(headers,['المجموع','المجموع الكلي','total','total score','total_score']),maxI=examField(headers,['النهاية العظمى','المجموع النهائي','الدرجة النهائية','max total','max_total','maximum']),pctI=examField(headers,['النسبة','النسبة المئوية','percentage','percent']),statusI=examField(headers,['النتيجة','حالة النتيجة','الحالة','result','result status','result_status']);
       const reserved=new Set([idI,nameI,gradeI,sectionI,specI,totalI,maxI,pctI,statusI].filter(i=>i>=0)),subjectHeaders=headers.map((h,i)=>({h,i})).filter(x=>x.h&&!reserved.has(x.i)),rows=[],errors=[],seen=new Set();
-      for(let ri=1;ri<grid.length;ri++){
+      for(let ri=headerRow+1;ri<grid.length;ri++){
         const cells=grid[ri];if(!cells.some(v=>String(v??'').trim()))continue;
         const national_id=examId(cells[idI]),full_name=examCell(cells,nameI);
         if(!/^\d{14}$/.test(national_id)){errors.push('الصف '+(ri+1)+': الرقم القومي ليس 14 رقمًا.');continue;}
