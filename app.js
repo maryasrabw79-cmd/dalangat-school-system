@@ -136,9 +136,27 @@
     $('#homeView').classList.add('hidden');$('#loginView').classList.add('hidden');$('#appView').classList.remove('hidden');$('#logoutBtn').classList.remove('hidden');
     $('#exportView').classList.add('hidden');$('#dataView').classList.remove('hidden');$('#dataView').classList.add('exam-admin-view');$('#tabs').classList.add('hidden');$('#refreshBtn').classList.add('hidden');
     $('#sectionTitle').textContent='نتائج الامتحانات';$('#sectionDesc').textContent='ارفع شيت الدرجات، وسيتم إصدار ملف Excel مستقل بأسماء الطالبات وأرقامهن القومية ورموز الدخول.';
-    $('#formHost').innerHTML='<div class="exam-import-panel"><div class="form-grid"><label>العام الدراسي<input id="examAcademicYear" type="text" value="2026/2027" required></label><label>الدور / الفصل الامتحاني<select id="examRound"><option>الدور الأول</option><option>الدور الثاني</option><option>الفصل الدراسي الأول</option><option>الفصل الدراسي الثاني</option><option>امتحان آخر</option></select></label><label>ملف Excel (.xlsx أو .xls)<input id="examExcelFile" type="file" accept=".xlsx,.xls,.csv" required></label></div><p>بعد الحفظ سيُنزَّل ملف Excel منفصل يحتوي على مسلسل واسم الطالبة والرقم القومي ورمز دخول عشوائي صالح لخمس مرات.</p><div class="form-actions"><button id="examImportBtn" type="button">رفع الشيت وإصدار رموز الدخول</button><button id="examTemplateBtn" type="button" class="secondary">تنزيل نموذج Excel</button></div><div id="examImportMsg" class="message" aria-live="polite"></div></div>';
+    $('#formHost').innerHTML='<div class="exam-import-panel"><div class="form-grid"><label>العام الدراسي<input id="examAcademicYear" type="text" value="2026/2027" required></label><label>الدور / الفصل الامتحاني<select id="examRound"><option>الدور الأول</option><option>الدور الثاني</option><option>الفصل الدراسي الأول</option><option>الفصل الدراسي الثاني</option><option>امتحان آخر</option></select></label><label>ملف Excel (.xlsx أو .xls)<input id="examExcelFile" type="file" accept=".xlsx,.xls,.csv" required></label></div><p>بعد الحفظ سيُنزَّل ملف Excel منفصل يحتوي على مسلسل واسم الطالبة والرقم القومي ورمز دخول عشوائي صالح لخمس مرات.</p><div class="form-actions"><button id="examImportBtn" type="button">رفع الشيت وإصدار رموز الدخول</button><button id="examTemplateBtn" type="button" class="secondary">تنزيل نموذج Excel</button><button id="examIssueCodesBtn" type="button" class="secondary">إصدار رموز للنتائج المحفوظة</button></div><div id="examImportMsg" class="message" aria-live="polite"></div></div>';
     $('#tableHead').innerHTML='';$('#tableBody').innerHTML='';$('#sectionMsg').textContent='';
-    $('#examImportBtn').addEventListener('click',importExamWorkbook);$('#examTemplateBtn').addEventListener('click',downloadExamTemplate);
+    $('#examImportBtn').addEventListener('click',importExamWorkbook);$('#examTemplateBtn').addEventListener('click',downloadExamTemplate);$('#examIssueCodesBtn').addEventListener('click',issueExamCodesFromSavedResults);
+  }
+  async function issueExamCodesFromSavedResults(){
+    const btn=$('#examIssueCodesBtn'),msg=$('#examImportMsg');
+    if(!admin()){msg.className='message error';msg.textContent='إصدار رموز الدخول متاح لمدير النظام فقط.';return;}
+    const year=$('#examAcademicYear').value.trim(),round=$('#examRound').value;
+    if(!year){msg.className='message error';msg.textContent='اكتب العام الدراسي أولًا.';return;}
+    btn.disabled=true;const old=btn.textContent;btn.textContent='جارٍ إصدار الرموز...';msg.className='message';msg.textContent='جارٍ إصدار ملف رموز الدخول للنتائج المحفوظة...';
+    try{
+      const {data:{session}}=await state.client.auth.getSession();
+      const issued=await callAccessFunction({action:'issue_exam_codes',academic_year:year,exam_round:round},session?.access_token||null);
+      if(!Array.isArray(issued.codes)||!issued.codes.length)throw new Error('لم يتم إرجاع رموز دخول.');
+      const rows=issued.codes.map((r,i)=>({'مسلسل':i+1,'اسم الطالبة':r.full_name,'الرقم القومي':String(r.national_id),'رمز الدخول':String(r.access_code)}));
+      const ws=XLSX.utils.json_to_sheet(rows);ws['!views']=[{rightToLeft:true}];ws['!cols']=[{wch:10},{wch:32},{wch:20},{wch:16}];
+      const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'رموز دخول الطالبات');
+      XLSX.writeFile(wb,'رموز_دخول_الطالبات_'+year.replace('/','-')+'.xlsx');
+      msg.className='message success';msg.textContent='تم إصدار وتنزيل رموز الدخول لعدد '+issued.codes.length+' طالبة. كل رمز صالح لخمس مرات، وتم استبدال الرموز السابقة لهذا العام/الدور.';
+    }catch(err){console.error('Issue saved exam access codes error:',err);msg.className='message error';msg.textContent='تعذر إصدار رموز الدخول: '+(err?.message||String(err));}
+    finally{btn.disabled=false;btn.textContent=old;}
   }
   function examHeader(value){return String(value??'').trim().toLowerCase().replace(/[أإآ]/g,'ا').replace(/[ى]/g,'ي').replace(/[ؤئ]/g,'ء').replace(/[\s_\-\.\/\\()]+/g,'');}
   function examField(headers,aliases){const wanted=aliases.map(examHeader);return headers.findIndex(h=>{const value=examHeader(h);return value&&wanted.some(a=>value===a||(a.length>=4&&value.includes(a))||(value.length>=5&&a.includes(value)));});}
