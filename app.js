@@ -21,25 +21,55 @@
       showLogin(); say('#loginMsg','إعدادات Supabase غير مكتملة. راجع ملف config.js.','error'); return;
     }
     state.client=window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey);
-    $('#loginForm').addEventListener('submit',login); $('#registerForm').addEventListener('submit',activateAccount); $('#showRegisterBtn').addEventListener('click',showRegister); $('#backToLoginBtn').addEventListener('click',showLogin); $('#logoutBtn').addEventListener('click',logout); $('#refreshBtn').addEventListener('click',()=>loadSection(state.section)); $('#homeBtn').addEventListener('click',showHome); $('#exportSelectedBtn').addEventListener('click',()=>exportReportsToExcel($('#exportSectionSelect').value));
+    $('#loginForm').addEventListener('submit',login); $('#studentResultsLoginForm').addEventListener('submit',submitStudentExamLogin); $('#studentExamBackBtn').addEventListener('click',showHome); $('#studentCertificateBackBtn').addEventListener('click',showHome); $('#studentCertificatePrintBtn').addEventListener('click',()=>window.print()); $('#registerForm').addEventListener('submit',activateAccount); $('#showRegisterBtn').addEventListener('click',showRegister); $('#backToLoginBtn').addEventListener('click',showLogin); $('#logoutBtn').addEventListener('click',logout); $('#refreshBtn').addEventListener('click',()=>loadSection(state.section)); $('#homeBtn').addEventListener('click',showHome); $('#exportSelectedBtn').addEventListener('click',()=>exportReportsToExcel($('#exportSectionSelect').value));
     $('#homeTabs').querySelectorAll('[data-home-section]').forEach(b=>b.addEventListener('click',()=>openHomeSelection(b.dataset.homeSection)));
     state.client.auth.onAuthStateChange((_event,session)=>{ if(session?.user){ state.user=session.user; setTimeout(loadProfile,0); } else { state.user=null; state.profile=null; showLogin(); }});
     const {data:{session}}=await state.client.auth.getSession(); if(session?.user){state.user=session.user;await loadProfile();} else showHome();
   }
-  function showHome(){ $('#homeView').classList.remove('hidden'); $('#loginView').classList.add('hidden'); $('#registerView').classList.add('hidden'); $('#appView').classList.add('hidden'); $('#logoutBtn').classList.toggle('hidden',!state.user); $('#homeBtn').classList.remove('hidden'); }
-  function showLogin(){ $('#homeView').classList.add('hidden'); $('#registerView').classList.add('hidden'); $('#loginView').classList.remove('hidden'); $('#appView').classList.add('hidden'); $('#logoutBtn').classList.add('hidden'); $('#homeBtn').classList.remove('hidden'); }
-  function showRegister(){ $('#homeView').classList.add('hidden'); $('#loginView').classList.add('hidden'); $('#registerView').classList.remove('hidden'); $('#appView').classList.add('hidden'); $('#logoutBtn').classList.add('hidden'); $('#homeBtn').classList.remove('hidden'); say('#registerMsg',''); }
+  function showHome(){ hideStudentResultViews(); $('#homeView').classList.remove('hidden'); $('#loginView').classList.add('hidden'); $('#registerView').classList.add('hidden'); $('#appView').classList.add('hidden'); $('#logoutBtn').classList.toggle('hidden',!state.user); $('#homeBtn').classList.remove('hidden'); }
+  function showLogin(){ hideStudentResultViews(); $('#homeView').classList.add('hidden'); $('#registerView').classList.add('hidden'); $('#loginView').classList.remove('hidden'); $('#appView').classList.add('hidden'); $('#logoutBtn').classList.add('hidden'); $('#homeBtn').classList.remove('hidden'); }
+  function showRegister(){ hideStudentResultViews(); $('#homeView').classList.add('hidden'); $('#loginView').classList.add('hidden'); $('#registerView').classList.remove('hidden'); $('#appView').classList.add('hidden'); $('#logoutBtn').classList.add('hidden'); $('#homeBtn').classList.remove('hidden'); say('#registerMsg',''); }
+  function hideStudentResultViews(){ $('#studentResultsLoginView').classList.add('hidden'); $('#studentCertificateView').classList.add('hidden'); }
+  function showStudentResultsLogin(){
+    $('#homeView').classList.add('hidden');$('#loginView').classList.add('hidden');$('#registerView').classList.add('hidden');$('#appView').classList.add('hidden');hideStudentResultViews();
+    $('#studentResultsLoginView').classList.remove('hidden');$('#logoutBtn').classList.add('hidden');$('#homeBtn').classList.remove('hidden');
+    $('#studentExamNationalId').value='';$('#studentExamAccessCode').value='';say('#studentExamLoginMsg','');
+  }
+  async function submitStudentExamLogin(e){
+    e.preventDefault();
+    const btn=$('#studentResultsLoginForm button[type="submit"]');
+    const nationalId=$('#studentExamNationalId').value.trim().replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+    const accessCode=$('#studentExamAccessCode').value.trim().replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+    if(!/^\\d{14}$/.test(nationalId)||!/^\\d{6,8}$/.test(accessCode)){say('#studentExamLoginMsg','أدخلي رقمًا قوميًا من 14 رقمًا ورمز دخول من 6 أو 8 أرقام.','error');return;}
+    btn.disabled=true;btn.textContent='جارٍ التحقق...';say('#studentExamLoginMsg','جارٍ التحقق من بيانات الدخول...');
+    try{
+      const response=await callAccessFunction({action:'student_exam_login',national_id:nationalId,access_code:accessCode});
+      if(!response?.certificate)throw new Error('تعذر تحميل الشهادة.');
+      renderStudentCertificate(response.certificate,response.uses_remaining);
+      $('#studentResultsLoginView').classList.add('hidden');$('#studentCertificateView').classList.remove('hidden');$('#homeBtn').classList.remove('hidden');
+    }catch(err){say('#studentExamLoginMsg',err?.message||'تعذر تسجيل الدخول. تأكدي من البيانات وحاولي مرة أخرى.','error');}
+    finally{btn.disabled=false;btn.textContent='عرض الشهادة';}
+  }
+  function renderStudentCertificate(r,remaining){
+    const subjects=r.subjects&&typeof r.subjects==='object'?Object.entries(r.subjects):[];
+    const marks=subjects.length?'<table class="certificate-subjects"><thead><tr><th>م</th><th>المادة</th><th>الدرجة</th></tr></thead><tbody>'+subjects.map(([name,mark],i)=>'<tr><td>'+String(i+1)+'</td><td>'+esc(name)+'</td><td>'+esc(mark)+'</td></tr>').join('')+'</tbody></table>':'<p>لا توجد درجات مواد مسجلة في الشهادة.</p>';
+    const meta=[['اسم الطالبة',r.full_name],['الرقم القومي',r.national_id],['الصف',r.grade],['الفصل',r.section],['التخصص',r.specialization],['العام الدراسي',r.academic_year],['الدور',r.exam_round]].filter(x=>x[1]!==null&&x[1]!==undefined&&String(x[1]).trim()!=='');
+    const summary=[['المجموع',r.total],['النهاية العظمى',r.max_total],['النسبة المئوية',r.percentage===null||r.percentage===undefined?'':String(r.percentage)+'%'],['النتيجة',r.result_status]].filter(x=>x[1]!==null&&x[1]!==undefined&&String(x[1]).trim()!=='');
+    $('#studentCertificateHost').innerHTML='<article class="student-certificate" dir="rtl"><header class="certificate-header"><div>مديرية التربية والتعليم بالبحيرة</div><div>إدارة الدلنجات التعليمية</div><h1>مدرسة الدلنجات الصناعية بنات</h1><h2>شهادة نتيجة امتحان</h2></header><div class="certificate-meta">'+meta.map(([k,v])=>'<div><strong>'+esc(k)+':</strong> '+esc(v)+'</div>').join('')+'</div><h3>بيان الدرجات</h3>'+marks+(summary.length?'<div class="certificate-summary">'+summary.map(([k,v])=>'<div><strong>'+esc(k)+':</strong> '+esc(v)+'</div>').join('')+'</div>':'')+'<footer class="certificate-footer"><span>شهادة مستخرجة إلكترونيًا من منظومة المدرسة</span><span>إدارة المدرسة</span></footer></article><p class="no-print certificate-usage-note">مرات الدخول المتبقية لهذا الرمز: '+esc(remaining)+' (من أصل 5).</p>';
+  }
+  async function openStudentResultHome(){showHome();}
   async function openHomeSelection(key){
+    if(key==='exam_results'){if(state.user&&state.profile&&admin()){await openExamResults();}else{showStudentResultsLogin();}return;}
     if(key==='export'&&state.user&&!admin()){say('#sectionMsg','استخراج ملفات Excel متاح لمدير النظام فقط.','error');return;}
     if(key==='home'){showHome();return;}
     if(key==='logout'){if(state.user){await logout();}else{showHome();}return;}
-    const implemented=['employees','students','attendance','leaves','training_courses','staff_schedules','users','export','exam_results'];
+    const implemented=['employees','students','attendance','leaves','training_courses','staff_schedules','users','export'];
     if(!implemented.includes(key)){window.alert('هذا القسم ظاهر في الواجهة الجديدة، لكن وظيفته التفصيلية لم تُبرمج بعد.');return;}
     const action=key==='export'?'export':key;
     if(!state.user||!state.profile){state.pendingAction=action;showLogin();return;}
     if(action==='exam_results'){await openExamResults();return;}
     if(action==='export'){showExportOptions();$('#homeView').classList.add('hidden');$('#loginView').classList.add('hidden');$('#appView').classList.remove('hidden');$('#logoutBtn').classList.remove('hidden');return;}
-    $('#tabs').classList.remove('hidden');
+    $('#dataView').classList.remove('exam-admin-view');$('#refreshBtn').classList.remove('hidden');$('#tabs').classList.remove('hidden');
     if(action==='users'&&!admin()){say('#sectionMsg','ليس لديك صلاحية إدارة المستخدمين.','error');return;}
     if(!sections[action]&&action!=='users'&&action!=='national_ids')return;
     if(!allowedSections().includes(action)){say('#sectionMsg','هذا القسم غير متاح لصلاحية حسابك.','error');return;}
@@ -104,12 +134,11 @@
   async function openExamResults(){
     if(!admin()){showHome();window.alert('قسم نتائج الامتحانات متاح لمدير النظام فقط.');return;}
     $('#homeView').classList.add('hidden');$('#loginView').classList.add('hidden');$('#appView').classList.remove('hidden');$('#logoutBtn').classList.remove('hidden');
-    $('#exportView').classList.add('hidden');$('#dataView').classList.remove('hidden');$('#tabs').classList.add('hidden');
-    $('#sectionTitle').textContent='نتائج الامتحانات';$('#sectionDesc').textContent='رفع شيت Excel وحفظ نتائج الطالبات للبحث والرجوع إليها.';
-    $('#formHost').innerHTML='<div class="exam-import-panel"><div class="form-grid"><label>العام الدراسي<input id="examAcademicYear" type="text" value="2026/2027" required></label><label>الدور / الفصل الامتحاني<select id="examRound"><option>الدور الأول</option><option>الدور الثاني</option><option>الفصل الدراسي الأول</option><option>الفصل الدراسي الثاني</option><option>امتحان آخر</option></select></label><label>ملف Excel (.xlsx أو .xls)<input id="examExcelFile" type="file" accept=".xlsx,.xls,.csv" required></label></div><p>الأعمدة المطلوبة: الرقم القومي، اسم الطالبة. ويمكن إضافة الصف والتخصص وأعمدة درجات المواد والمجموع والنسبة والنتيجة.</p><div class="form-actions"><button id="examImportBtn" type="button">قراءة الشيت وحفظ النتائج</button><button id="examTemplateBtn" type="button" class="secondary">تنزيل نموذج Excel</button></div><div id="examImportMsg" class="message" aria-live="polite"></div><div class="form-grid"><label>بحث بالاسم أو الرقم القومي<input id="examSearch" type="search" placeholder="اكتب الاسم أو الرقم القومي"></label><label>تصفية العام الدراسي<input id="examSearchYear" type="text" value="2026/2027"></label><label>تصفية الدور<select id="examSearchRound"><option>الدور الأول</option><option>الدور الثاني</option><option>الفصل الدراسي الأول</option><option>الفصل الدراسي الثاني</option><option>امتحان آخر</option></select></label></div><div class="form-actions"><button id="examSearchBtn" type="button">عرض النتائج</button><button id="examExportBtn" type="button" class="secondary">تصدير النتائج إلى Excel</button></div></div>';
-    $('#tableHead').innerHTML='';$('#tableBody').innerHTML='';
-    $('#examImportBtn').addEventListener('click',importExamWorkbook);$('#examTemplateBtn').addEventListener('click',downloadExamTemplate);$('#examSearchBtn').addEventListener('click',loadExamResults);$('#examSearch').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();loadExamResults();}});$('#examExportBtn').addEventListener('click',exportExamResults);
-    await loadExamResults();
+    $('#exportView').classList.add('hidden');$('#dataView').classList.remove('hidden');$('#dataView').classList.add('exam-admin-view');$('#tabs').classList.add('hidden');$('#refreshBtn').classList.add('hidden');
+    $('#sectionTitle').textContent='نتائج الامتحانات';$('#sectionDesc').textContent='ارفع شيت الدرجات، وسيتم إصدار ملف Excel مستقل بأسماء الطالبات وأرقامهن القومية ورموز الدخول.';
+    $('#formHost').innerHTML='<div class="exam-import-panel"><div class="form-grid"><label>العام الدراسي<input id="examAcademicYear" type="text" value="2026/2027" required></label><label>الدور / الفصل الامتحاني<select id="examRound"><option>الدور الأول</option><option>الدور الثاني</option><option>الفصل الدراسي الأول</option><option>الفصل الدراسي الثاني</option><option>امتحان آخر</option></select></label><label>ملف Excel (.xlsx أو .xls)<input id="examExcelFile" type="file" accept=".xlsx,.xls,.csv" required></label></div><p>بعد الحفظ سيُنزَّل ملف Excel منفصل يحتوي على مسلسل واسم الطالبة والرقم القومي ورمز دخول عشوائي صالح لخمس مرات.</p><div class="form-actions"><button id="examImportBtn" type="button">رفع الشيت وإصدار رموز الدخول</button><button id="examTemplateBtn" type="button" class="secondary">تنزيل نموذج Excel</button></div><div id="examImportMsg" class="message" aria-live="polite"></div></div>';
+    $('#tableHead').innerHTML='';$('#tableBody').innerHTML='';$('#sectionMsg').textContent='';
+    $('#examImportBtn').addEventListener('click',importExamWorkbook);$('#examTemplateBtn').addEventListener('click',downloadExamTemplate);
   }
   function examHeader(value){return String(value??'').trim().toLowerCase().replace(/[أإآ]/g,'ا').replace(/[ى]/g,'ي').replace(/[ؤئ]/g,'ء').replace(/[\s_\-\.\/\\()]+/g,'');}
   function examField(headers,aliases){const wanted=aliases.map(examHeader);return headers.findIndex(h=>{const value=examHeader(h);return value&&wanted.some(a=>value===a||(a.length>=4&&value.includes(a))||(value.length>=5&&a.includes(value)));});}
@@ -179,8 +208,18 @@
       }
       if(!rows.length)throw new Error('لم توجد صفوف صالحة للحفظ. '+errors.slice(0,4).join(' '));
       let saved=0;for(let i=0;i<rows.length;i+=100){const {error}=await state.client.from('exam_results').upsert(rows.slice(i,i+100),{onConflict:'national_id,academic_year,exam_round,grade'});if(error)throw new Error('تعذر حفظ النتائج في قاعدة البيانات: '+error.message);saved+=Math.min(100,rows.length-i);}
-      msg.className='message '+(errors.length?'error':'success');msg.textContent='تم حفظ/تحديث '+saved+' نتيجة من ملف «'+file.name+'». '+(errors.length?'تم تجاوز '+errors.length+' صف غير صالح. أول الملاحظات: '+errors.slice(0,5).join(' | '):'لم توجد أخطاء في الصفوف.')+' عند إعادة رفع نفس العام والدور والصف يتم تحديث السجل بدل تكراره.';
-      $('#examSearchYear').value=year;$('#examSearchRound').value=round;await loadExamResults();
+      let codeFileNote='';
+      try{
+        const {data:{session}}=await state.client.auth.getSession();
+        const issued=await callAccessFunction({action:'issue_exam_codes',academic_year:year,exam_round:round},session?.access_token||null);
+        if(!Array.isArray(issued.codes)||!issued.codes.length)throw new Error('لم يتم إرجاع رموز دخول.');
+        const codeRows=issued.codes.map((r,i)=>({'مسلسل':i+1,'اسم الطالبة':r.full_name,'الرقم القومي':String(r.national_id),'رمز الدخول':String(r.access_code)}));
+        const ws=XLSX.utils.json_to_sheet(codeRows);ws['!views']=[{rightToLeft:true}];ws['!cols']=[{wch:10},{wch:32},{wch:20},{wch:16}];
+        const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'رموز دخول الطالبات');
+        XLSX.writeFile(wb,'رموز_دخول_الطالبات_'+year.replace('/','-')+'.xlsx');
+        codeFileNote=' تم إصدار وتنزيل ملف رموز الدخول لعدد '+issued.codes.length+' طالبة، وكل رمز صالح لخمس مرات.';
+      }catch(codeErr){console.error('Issue student access codes error:',codeErr);codeFileNote=' تم حفظ النتائج، لكن تعذر إصدار ملف رموز الدخول: '+(codeErr?.message||String(codeErr))+'.';}
+      msg.className='message '+(errors.length?'error':'success');msg.textContent='تم حفظ/تحديث '+saved+' نتيجة من ملف «'+file.name+'». '+(errors.length?'تم تجاوز '+errors.length+' صف غير صالح. أول الملاحظات: '+errors.slice(0,5).join(' | '):'لم توجد أخطاء في الصفوف.')+codeFileNote;
     }catch(err){msg.className='message error';msg.textContent='تعذر استيراد الشيت: '+(err?.message||String(err));}
     finally{btn.disabled=false;}
   }
@@ -212,7 +251,7 @@
     const rows=(data||[]).map(r=>({'الرقم القومي':r.national_id,'اسم الطالبة':r.full_name,'الصف':r.grade,'الفصل':r.section,'التخصص':r.specialization,'المواد والدرجات':Object.entries(r.subjects||{}).map(([k,v])=>k+': '+v).join(' | '),'المجموع':r.total,'النهاية العظمى':r.max_total,'النسبة المئوية':r.percentage,'النتيجة':r.result_status,'العام الدراسي':r.academic_year,'الدور':r.exam_round}));
     const ws=XLSX.utils.json_to_sheet(rows);ws['!views']=[{rightToLeft:true}];const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'نتائج الامتحانات');XLSX.writeFile(wb,'نتائج_الامتحانات_'+year.replace('/','-')+'.xlsx');
   }
-  function updateHomeTiles(){ document.querySelectorAll('#homeTabs [data-home-section="export"]').forEach(tile=>{tile.classList.toggle('hidden',!admin());}); document.querySelectorAll('#homeTabs [data-home-section="students"]').forEach(tile=>{tile.classList.toggle('hidden',!admin());}); document.querySelectorAll('#homeTabs [data-home-section="exam_results"]').forEach(tile=>{tile.classList.toggle('hidden',!admin());}); }
+  function updateHomeTiles(){ document.querySelectorAll('#homeTabs [data-home-section="export"]').forEach(tile=>{tile.classList.toggle('hidden',!admin());}); document.querySelectorAll('#homeTabs [data-home-section="students"]').forEach(tile=>{tile.classList.toggle('hidden',!admin());}); document.querySelectorAll('#homeTabs [data-home-section="exam_results"]').forEach(tile=>tile.classList.remove('hidden')); }
   function allowedSections(){ if(admin())return [...Object.keys(sections),'national_ids','users']; if(state.role==='employee')return ['employees','leaves','training_courses']; return []; }
   function renderTabs(){ const nav=$('#tabs');nav.innerHTML=''; const allowed=allowedSections(); if(!allowed.length){nav.innerHTML='<span>لا توجد أقسام متاحة لهذا الحساب.</span>';return;} if(!allowed.includes(state.section))state.section=allowed[0]; allowed.forEach(key=>{const b=document.createElement('button');b.className='tab'+(key===state.section?' active':'');b.textContent=key==='users'?'إدارة المستخدمين':key==='national_ids'?'إضافة الأرقام القومية':sections[key].title;b.onclick=()=>{state.section=key;renderTabs();loadSection(key);};nav.appendChild(b);}); }
   async function renderUsers(){
