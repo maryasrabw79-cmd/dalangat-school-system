@@ -248,3 +248,14 @@ body{background:#eaf7f4}
  #studentCertificateView { width: 100% !important; height: auto !important; }
  .certificate-matrix .certificate-row-label { background: #f5f0df !important; color:#4f411e !important; white-space:nowrap; }
 }
+
+
+/* Keep subject grade columns compact inside the landscape certificate frame */
+.certificate-matrix{table-layout:fixed!important;width:100%!important;min-width:0!important;}
+.certificate-matrix .certificate-row-label{width:82px!important;min-width:82px!important;max-width:82px!important;padding:4px 2px!important;white-space:normal!important;font-size:10px!important;}
+.certificate-matrix th:not(.certificate-row-label),.certificate-matrix td{min-width:0!important;max-width:none;padding:4px 2px!important;font-size:10px!important;line-height:1.25;overflow-wrap:anywhere;word-break:break-word;}
+@media print{
+ .certificate-matrix{table-layout:fixed!important;width:100%!important;min-width:0!important;}
+ .certificate-matrix .certificate-row-label{width:82px!important;min-width:82px!important;max-width:82px!important;padding:3px 1px!important;font-size:9px!important;white-space:normal!important;}
+ .certificate-matrix th:not(.certificate-row-label),.certificate-matrix td{min-width:0!important;padding:3px 1px!important;font-size:9px!important;line-height:1.2;overflow-wrap:anywhere;word-break:break-word;}
+}
