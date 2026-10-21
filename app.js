@@ -114,7 +114,7 @@
   function examHeader(value){return String(value??'').trim().toLowerCase().replace(/[أإآ]/g,'ا').replace(/[ى]/g,'ي').replace(/[ؤئ]/g,'ء').replace(/[\s_\-\.\/\\()]+/g,'');}
   function examField(headers,aliases){const wanted=aliases.map(examHeader);return headers.findIndex(h=>wanted.includes(examHeader(h)));}
   function examCell(row,index){return index<0?'':row[index]===undefined||row[index]===null?'':String(row[index]).trim();}
-  function examId(value){const digits=v=>String(v??'').replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/[۰-۹]/g,d=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));if(typeof value==='number'&&Number.isFinite(value))return String(Math.trunc(value));let v=digits(value).trim().replace(/[\s\-٬,]/g,'').replace(/\.0$/,'');if(/^\d+(?:\.\d+)?e[+\-]?\d+$/i.test(v)){const n=Number(v);if(Number.isFinite(n)&&n>=0&&Number.isInteger(n))v=String(n);}return v;}
+  function examId(value){const digits=v=>String(v??'').replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/[۰-۹]/g,d=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));if(typeof value==='number'&&Number.isFinite(value))return Number.isInteger(value)&&value>=0?String(value):'';let v=digits(value).trim().replace(/[\u200e\u200f\u061c\u00a0\u200b\u202a-\u202e'’]/g,'').replace(/[٬,]/g,'');if(/^\d+(?:\.\d+)?e[+\-]?\d+$/i.test(v)){const n=Number(v);if(Number.isFinite(n)&&n>=0&&Number.isInteger(n))v=String(n);}if(/^\d+\.0+$/.test(v))v=v.replace(/\.0+$/,'');return v.replace(/[^0-9]/g,'');}
   async function importExamWorkbook(){
     const btn=$('#examImportBtn'),msg=$('#examImportMsg'),file=$('#examExcelFile').files[0],year=$('#examAcademicYear').value.trim(),round=$('#examRound').value;
     if(!admin()){msg.className='message error';msg.textContent='ليس لديك صلاحية استيراد النتائج.';return;}
