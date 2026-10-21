@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" role="img" aria-labelledby="title desc">
+<title id="title">شعار مدرسة الدلنجات الصناعية بنات</title><desc id="desc">شعار دائري أزرق لطالبة محجبة وكتاب مفتوح ورموز للتكنولوجيا والملابس والخياطة</desc>
+<defs><path id="topArc" d="M 65,250 A185,185 0 0,1 435,250"/><path id="bottomArc" d="M 62,255 A188,188 0 0,0 438,255"/></defs>
+<circle cx="250" cy="250" r="238" fill="#fff" stroke="#123f7a" stroke-width="12"/><circle cx="250" cy="250" r="220" fill="#f7fbff" stroke="#2468a6" stroke-width="4"/>
+<circle cx="250" cy="250" r="177" fill="#fff" stroke="#c8dced" stroke-width="2"/>
+<text font-family="Tahoma,Arial,sans-serif" font-size="25" font-weight="700" fill="#123f7a" letter-spacing=".2"><textPath href="#topArc" startOffset="50%" text-anchor="middle">محافظة البحيرة</textPath></text>
+<text font-family="Tahoma,Arial,sans-serif" font-size="19" font-weight="700" fill="#123f7a"><textPath href="#bottomArc" startOffset="50%" text-anchor="middle">مدرسة الدلنجات الصناعية بنات</textPath></text>
+<g fill="none" stroke="#174f8a" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+<!-- computer --> <rect x="80" y="190" width="75" height="54" rx="4" fill="#eaf4ff"/><path d="M117 245v12m-18 0h36"/>
+<!-- sewing machine --> <path d="M346 222h55v22h-55z M355 222v-27h23q12 0 12 12v15 M355 244v13h47 M367 222v-13h12 M350 257h55"/>
+<!-- garment pattern --> <path d="M96 287l16-14 16 14-7 8 9 28H94l9-28z" fill="#eaf4ff"/>
+</g>
+<!-- schoolgirl shoulders and uniform -->
+<path d="M170 344q6-55 45-64h70q40 10 46 64v35H170z" fill="#fff" stroke="#174f8a" stroke-width="6"/>
+<!-- hijab silhouette -->
+<path d="M185 232q-5-71 65-76 72 5 66 76l-7 69q-26 33-59 33-35 0-59-33z" fill="#174f8a"/>
+<path d="M207 220q1-51 43-52 44 2 45 52l-5 44q-15 23-40 23-24 0-39-23z" fill="#f4f8fc" stroke="#174f8a" stroke-width="4"/>
+<path d="M207 221q-12 34-7 65l-18 17q28 8 54-10l-8-16" fill="#fff" stroke="#174f8a" stroke-width="4"/>
+<path d="M295 221q12 34 7 65l18 17q-28 8-54-10l8-16" fill="#fff" stroke="#174f8a" stroke-width="4"/>
+<!-- face -->
+<ellipse cx="250" cy="226" rx="37" ry="45" fill="#e7b994" stroke="#174f8a" stroke-width="3"/>
+<path d="M230 225h5m30 0h5" stroke="#123f7a" stroke-width="5" stroke-linecap="round"/><path d="M239 246q11 8 22 0" fill="none" stroke="#123f7a" stroke-width="3" stroke-linecap="round"/>
+<!-- collar -->
+<path d="M222 283l28 23 28-23" fill="#eaf4ff" stroke="#174f8a" stroke-width="4"/>
+<!-- open book -->
+<path d="M145 344q49-16 105 9 56-25 105-9v48q-54-18-105 8-51-26-105-8z" fill="#fff" stroke="#123f7a" stroke-width="5"/>
+<path d="M250 353v47m-88-39q24-2 45 6m-45 8q24-2 45 6m91-20q24-8 45-6m-45 22q24-8 45-6" fill="none" stroke="#2468a6" stroke-width="3"/>
+<circle cx="250" cy="118" r="5" fill="#2468a6"/><circle cx="250" cy="431" r="5" fill="#2468a6"/>
+</svg>
