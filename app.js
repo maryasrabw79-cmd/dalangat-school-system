@@ -178,7 +178,25 @@
     if(typeof XLSX==='undefined'){msg.className='message error';msg.textContent='تعذر تحميل قارئ Excel. حدّث الصفحة وحاول مرة أخرى.';return;}
     btn.disabled=true;msg.className='message';msg.textContent='جارٍ قراءة الملف وفحص البيانات...';
     try{
-      const book=XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:false}),sheet=book.Sheets[book.SheetNames[0]],grid=XLSX.utils.sheet_to_json(sheet,{header:1,defval:'',raw:true});
+      const book=XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:false});
+      // اجمع بيانات الشيتين (الأول والثاني) مع الحفاظ على عناوين الأعمدة، وحدد الصف من اسم الشيت.
+      const sheetGrids=book.SheetNames.map(name=>({name,grid:XLSX.utils.sheet_to_json(book.Sheets[name],{header:1,defval:'',raw:true})})).filter(x=>x.grid.length);
+      if(!sheetGrids.length)throw new Error('الملف لا يحتوي على شيتات بيانات.');
+      const baseGrid=sheetGrids[0].grid, baseHeaderIndex=baseGrid.findIndex(row=>row.some(v=>/الرقم القومي|national.?id/i.test(String(v??'')))&&row.some(v=>/اسم الطالبة|اسم الطالب|full.?name|student.?name/i.test(String(v??''))));
+      const grid=baseGrid.map(row=>row.slice());
+      for(const item of sheetGrids.slice(1)){
+        const hi=item.grid.findIndex(row=>row.some(v=>/الرقم القومي|national.?id/i.test(String(v??'')))&&row.some(v=>/اسم الطالبة|اسم الطالب|full.?name|student.?name/i.test(String(v??''))));
+        if(hi<0||baseHeaderIndex<0)throw new Error('تأكد أن كل شيت يحتوي على عناوين الرقم القومي واسم الطالبة.');
+        const headers=baseGrid[baseHeaderIndex].map(v=>String(v??'').trim());
+        const otherHeaders=item.grid[hi].map(v=>String(v??'').trim());
+        if(headers.join('|')!==otherHeaders.join('|'))throw new Error('يجب أن تكون عناوين الأعمدة في شيت الصف الأول والثاني متطابقة. استخدم نموذج Excel الموجود في المنظومة.');
+        const gradeIndex=headers.findIndex(v=>/^(الصف|الصف الدراسي|grade)$/i.test(String(v).trim()));
+        const sheetGrade=/الثاني|second|grade\s*2/i.test(item.name)?'الثاني':'الأول';
+        for(let ri=hi+1;ri<item.grid.length;ri++){const row=item.grid[ri].slice();if(gradeIndex>=0&&!String(row[gradeIndex]??'').trim())row[gradeIndex]=sheetGrade;grid.push(row);}
+      }
+      const gradeIndexAll=baseHeaderIndex>=0?baseGrid[baseHeaderIndex].findIndex(v=>/^(الصف|الصف الدراسي|grade)$/i.test(String(v).trim())):-1;
+      if(gradeIndexAll>=0){for(const item of sheetGrids){const hi=item.grid.findIndex(row=>row.some(v=>/الرقم القومي|national.?id/i.test(String(v??'')))&&row.some(v=>/اسم الطالبة|اسم الطالب|full.?name|student.?name/i.test(String(v??''))));const sheetGrade=/الثاني|second|grade\s*2/i.test(item.name)?'الثاني':'الأول';for(let ri=hi+1;ri<item.grid.length;ri++){const row=item.grid[ri];if(row&&!String(row[gradeIndexAll]??'').trim()&&row.some(v=>String(v??'').trim()))row[gradeIndexAll]=sheetGrade;}}}
+      if(grid.length<2)throw new Error('الملف لا يحتوي على صفوف بيانات.');
       if(grid.length<2)throw new Error('الملف لا يحتوي على صفوف بيانات.');
       // ابحث عن صف العناوين ضمن أول 10 صفوف، حتى لو سبقته عناوين أو بيانات المدرسة.
       const idAliases=['الرقم القومي','رقم قومي','الرقم القومى','رقم الطالبة القومي','الرقم القومي للطالبة','national_id','national id','nationalid','national identity','id number'];
@@ -274,9 +292,14 @@
   }
   function downloadExamTemplate(){
     if(typeof XLSX==='undefined'){window.alert('مكتبة Excel غير متاحة.');return;}
-    const sample=[['الرقم القومي','اسم الطالبة','الصف','الفصل','التخصص','لغة عربية','لغة إنجليزية','رياضيات','المجموع','النهاية العظمى','النسبة المئوية','النتيجة'],['12345678901234','اسم تجريبي','الأول','1/1','فني تكنولوجيا الحاسبات',80,75,90,245,300,81.67,'ناجحة']];
-    const ws=XLSX.utils.aoa_to_sheet(sample);ws['!views']=[{rightToLeft:true}];ws['!cols']=[{wch:20},{wch:28},{wch:14},{wch:12},{wch:28},{wch:14},{wch:16},{wch:14},{wch:12},{wch:16},{wch:16},{wch:16}];
-    const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'نتائج الامتحانات');XLSX.writeFile(wb,'نموذج_نتائج_الامتحانات.xlsx');
+    // نموذج ثابت داخل المنظومة: شيت مستقل لكل صف، وصف النهاية العظمى أسفل العناوين.
+    const headers=['الرقم القومي','اسم الطالبة','الصف','الفصل','التخصص','لغة عربية','لغة إنجليزية','رياضيات','فيزياء','كيمياء','دراسات اجتماعية','حاسب آلي','الوحدة الأولى','الوحدة الثانية','المجموع','النهاية العظمى','النسبة المئوية','النتيجة','مواد الرسوب','رقم الجلوس'];
+    const maxMarks=['','','','','',50,40,30,20,20,20,20,'','','','','','','',''];
+    const makeSheet=(grade)=>{const ws=XLSX.utils.aoa_to_sheet([headers,maxMarks]);ws['!views']=[{rightToLeft:true}];ws['!cols']=headers.map((h,i)=>({wch:i===0?20:i===1?30:i===4?28: i>=5&&i<=13?16:18}));ws['!autofilter']={ref:'A1:T1'};ws['!freeze']={xSplit:2,ySplit:2};return ws;};
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,makeSheet('الأول'),'الصف الأول');
+    XLSX.utils.book_append_sheet(wb,makeSheet('الثاني'),'الصف الثاني');
+    XLSX.writeFile(wb,'نموذج_نتائج_الامتحانات_الصف_الأول_والثاني.xlsx');
   }
   async function exportExamResults(){
     if(typeof XLSX==='undefined'){window.alert('مكتبة Excel غير متاحة.');return;}
