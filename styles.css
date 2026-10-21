@@ -164,3 +164,8 @@ body{background:#eaf7f4}
 .home-hero img.school-emblem-img{width:76px!important;height:76px!important;max-width:76px!important;min-width:76px!important;max-height:76px!important;object-fit:contain!important;float:left!important;margin:4px 12px 8px 4px!important;padding:0!important;}
 @media(max-width:900px){.home-hero img.school-emblem-img{width:68px!important;height:68px!important;max-width:68px!important;min-width:68px!important;max-height:68px!important;}}
 @media(max-width:560px){.home-hero img.school-emblem-img{width:58px!important;height:58px!important;max-width:58px!important;min-width:58px!important;max-height:58px!important;float:none!important;display:block!important;margin:0 auto 8px!important;}}
+
+/* Double the currently selected school emblem size */
+.home-hero img.school-emblem-img{width:152px!important;height:152px!important;max-width:152px!important;min-width:152px!important;max-height:152px!important;object-fit:contain!important;float:left!important;margin:4px 16px 10px 4px!important;padding:0!important;}
+@media(max-width:900px){.home-hero img.school-emblem-img{width:136px!important;height:136px!important;max-width:136px!important;min-width:136px!important;max-height:136px!important;}}
+@media(max-width:560px){.home-hero img.school-emblem-img{width:116px!important;height:116px!important;max-width:116px!important;min-width:116px!important;max-height:116px!important;float:none!important;display:block!important;margin:0 auto 8px!important;}}
