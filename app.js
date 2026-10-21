@@ -29,7 +29,7 @@
   function showLogin(){ $('#homeView').classList.add('hidden'); $('#registerView').classList.add('hidden'); $('#loginView').classList.remove('hidden'); $('#appView').classList.add('hidden'); $('#logoutBtn').classList.add('hidden'); $('#homeBtn').classList.remove('hidden'); }
   function showRegister(){ $('#homeView').classList.add('hidden'); $('#loginView').classList.add('hidden'); $('#registerView').classList.remove('hidden'); $('#appView').classList.add('hidden'); $('#logoutBtn').classList.add('hidden'); $('#homeBtn').classList.remove('hidden'); say('#registerMsg',''); }
   async function openHomeSelection(key){
-    if(key==='export'&&!admin()){say('#sectionMsg','استخراج ملفات Excel متاح لمدير النظام فقط.','error');return;}
+    if(key==='export'&&state.user&&!admin()){say('#sectionMsg','استخراج ملفات Excel متاح لمدير النظام فقط.','error');return;}
     if(key==='home'){showHome();return;}
     if(key==='logout'){if(state.user){await logout();}else{showHome();}return;}
     const implemented=['employees','students','attendance','leaves','training_courses','staff_schedules','users','export'];
