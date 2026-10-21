@@ -52,12 +52,17 @@
   }
   function renderStudentCertificate(r,remaining){
     const nonSubjectHeader=/^(?:الديانة|ديانة الطالبة|ديانة|رقم الجلوس|رقم جلوس|جلوس|seat(?: number|_no|_number)?|religion|national id|الرقم القومي|اسم الطالبة|اسم الطالب|اسم التلميذة|الاسم)$/i;
-    const subjects=r.subjects&&typeof r.subjects==='object'?Object.entries(r.subjects).filter(([name])=>!nonSubjectHeader.test(String(name).trim())):[];
+    const rawSubjects=r.subjects&&typeof r.subjects==='object'?Object.entries(r.subjects).filter(([name])=>!nonSubjectHeader.test(String(name).trim())):[];
+    // ترتيب المواد مطابق لنموذج الشيت المستخدم في المنظومة، مع إبقاء أي مواد إضافية في نهاية الجدول.
+    const subjectOrder=['لغة عربية','اللغة العربية','عربي','لغة إنجليزية','اللغة الإنجليزية','انجليزي','إنجليزي','رياضيات','الرياضيات','فيزياء','الفيزياء','كيمياء','الكيمياء','دراسات اجتماعية','الدراسات الاجتماعية','حاسب آلي','الحاسب الآلي','الوحدة الأولى','الوحدة الثانية'];
+    const orderIndex=name=>{const n=examHeader(name);const i=subjectOrder.findIndex(s=>examHeader(s)===n);return i<0?999:i;};
+    const subjects=rawSubjects.map((item,index)=>({item,index})).sort((a,b)=>orderIndex(a.item[0])-orderIndex(b.item[0])||a.index-b.index).map(x=>x.item);
     const escText=v=>esc(v===null||v===undefined||String(v).trim()===''?'—':v);
+    const defaultMaxMarks={'لغة عربية':50,'اللغة العربية':50,'عربي':50,'لغة إنجليزية':40,'اللغة الإنجليزية':40,'انجليزي':40,'إنجليزي':40,'رياضيات':30,'الرياضيات':30,'فيزياء':20,'الفيزياء':20,'كيمياء':20,'الكيمياء':20,'دراسات اجتماعية':20,'الدراسات الاجتماعية':20,'حاسب آلي':20,'الحاسب الآلي':20};
     const failedRaw=r.failed_subjects??r.subjects_failed??r.failing_subjects??'';
     const failedList=Array.isArray(failedRaw)?failedRaw.join('، '):String(failedRaw||'').trim();
     const subjectNames=subjects.length?subjects.map(([name])=>'<th>'+esc(name)+'</th>').join(''):'<th>لا توجد مواد مسجلة</th>';
-    const totals=subjects.length?subjects.map(([name])=>'<td>'+escText((r.subject_max_marks&&r.subject_max_marks[name])??(r.max_marks&&r.max_marks[name])??'—')+'</td>').join(''):'<td>—</td>';
+    const totals=subjects.length?subjects.map(([name])=>'<td>'+escText((r.subject_max_marks&&r.subject_max_marks[name])??(r.max_marks&&r.max_marks[name])??defaultMaxMarks[name]??'—')+'</td>').join(''):'<td>—</td>';
     const marks=subjects.length?subjects.map(([name,mark])=>'<td>'+escText(mark)+'</td>').join(''):'<td>—</td>';
     const seatNo=r.seat_number??r.seating_number??r.exam_seat_number??r.seat_no??'غير مسجل';
     const meta=[['اسم الطالبة',r.full_name],['الرقم القومي',r.national_id],['رقم الجلوس',seatNo],['الصف',r.grade],['الفصل',r.section],['التخصص',r.specialization],['العام الدراسي',r.academic_year],['الدور',r.exam_round]].filter(x=>x[1]!==null&&x[1]!==undefined&&String(x[1]).trim()!=='');
