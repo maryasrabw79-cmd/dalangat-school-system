@@ -197,3 +197,48 @@ body{background:#eaf7f4}
   .no-print{display:none!important}
   .certificate-subjects tr{break-inside:avoid}
 }
+
+
+/* Landscape ornate student result certificate */
+.student-certificate{max-width:none;width:100%;border:0;border-radius:0;background:#fff;padding:12px;color:#162f4a;box-shadow:none}
+.certificate-ornament{position:relative;border:5px double #9b7931;outline:1px solid #1d5277;outline-offset:-11px;padding:24px 26px;background:linear-gradient(135deg,#fff 0%,#fffdf5 50%,#f8fcff 100%)}
+.certificate-ornament:before,.certificate-ornament:after{content:"✦ ❖ ✦";position:absolute;color:#a27c2c;font-size:18px;letter-spacing:8px;top:5px}
+.certificate-ornament:before{right:18px}.certificate-ornament:after{left:18px}
+.certificate-header{border-bottom:2px solid #a27c2c;padding-bottom:10px;margin-bottom:12px;color:#173f61;font-weight:800;line-height:1.65}
+.certificate-header h1{font-size:22px;margin:3px 0;color:#174d75}
+.certificate-header h2{font-size:19px;margin:4px 0 0;color:#8b681e}
+.certificate-ministry{font-size:14px}
+.certificate-meta{grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin:10px 0 14px}
+.certificate-meta>div{padding:7px 8px;border:1px solid #c6b47d;border-radius:0;background:#fffef8;font-size:12px}
+.certificate-matrix{table-layout:auto;width:100%;min-width:0;border-collapse:collapse;margin:8px 0 12px}
+.certificate-matrix th,.certificate-matrix td{border:1px solid #9d9a8a;padding:8px 6px;text-align:center;vertical-align:middle;font-size:12px;overflow-wrap:anywhere}
+.certificate-matrix thead th{background:#e6edf2;color:#163e5d;font-weight:900}
+.certificate-matrix tbody th{background:#f5f0df;color:#4f411e;white-space:nowrap}
+.certificate-row-label{min-width:95px;width:115px}
+.certificate-result{border:2px solid #a27c2c;background:#fffdf4;padding:10px 14px;text-align:center;margin:12px 0;font-size:16px;color:#173f61}
+.certificate-failed{font-size:13px;margin-top:7px;color:#8b1f1f}
+.certificate-summary{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
+.certificate-summary>div{border:1px solid #c6b47d;border-radius:0;padding:7px}
+.certificate-footer{border-top:1px solid #bca96e;margin-top:14px;padding-top:10px;font-size:11px;color:#475b6c}
+@media(max-width:700px){.certificate-ornament{padding:20px 10px}.certificate-meta{grid-template-columns:repeat(2,minmax(0,1fr))}.certificate-matrix th,.certificate-matrix td{padding:5px 3px;font-size:10px}}
+@media print{
+  @page{size:A4 landscape;margin:7mm}
+  html,body{width:100%;height:auto!important;background:#fff!important}
+  body *{visibility:hidden!important}
+  #studentCertificateView,#studentCertificateView *{visibility:visible!important}
+  #studentCertificateView{display:block!important;position:absolute;left:0;top:0;width:100%;max-width:none;margin:0!important;padding:0!important;border:0!important;box-shadow:none!important}
+  #studentCertificateHost{width:100%;margin:0;padding:0}
+  .student-certificate{width:100%;max-width:none;margin:0;padding:0;border:0;box-shadow:none;break-inside:avoid}
+  .certificate-ornament{padding:17px 20px;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+  .certificate-header{padding-bottom:7px;margin-bottom:8px}
+  .certificate-header h1{font-size:19px}.certificate-header h2{font-size:16px}
+  .certificate-meta{gap:5px;margin:7px 0 9px}
+  .certificate-meta>div{padding:5px 6px;font-size:10px}
+  .certificate-matrix{margin:6px 0 8px}
+  .certificate-matrix th,.certificate-matrix td{padding:6px 4px;font-size:10px}
+  .certificate-result{margin:8px 0;padding:7px 10px;font-size:14px}
+  .certificate-summary{margin-top:7px}
+  .certificate-summary>div{padding:5px;font-size:10px}
+  .certificate-footer{margin-top:9px;padding-top:7px}
+  .no-print{display:none!important}
+}
