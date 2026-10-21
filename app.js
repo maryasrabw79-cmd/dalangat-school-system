@@ -51,7 +51,8 @@
     finally{btn.disabled=false;btn.textContent='عرض الشهادة';}
   }
   function renderStudentCertificate(r,remaining){
-    const nonSubjectHeader=/^(?:الديانة|ديانة الطالبة|ديانة|رقم الجلوس|رقم جلوس|جلوس|seat(?: number|_no|_number)?|religion|national id|الرقم القومي|اسم الطالبة|اسم الطالب|اسم التلميذة|الاسم)$/i;\n    const subjects=r.subjects&&typeof r.subjects==='object'?Object.entries(r.subjects).filter(([name])=>!nonSubjectHeader.test(String(name).trim())):[];
+    const nonSubjectHeader=/^(?:الديانة|ديانة الطالبة|ديانة|رقم الجلوس|رقم جلوس|جلوس|seat(?: number|_no|_number)?|religion|national id|الرقم القومي|اسم الطالبة|اسم الطالب|اسم التلميذة|الاسم)$/i;
+    const subjects=r.subjects&&typeof r.subjects==='object'?Object.entries(r.subjects).filter(([name])=>!nonSubjectHeader.test(String(name).trim())):[];
     const escText=v=>esc(v===null||v===undefined||String(v).trim()===''?'—':v);
     const failedRaw=r.failed_subjects??r.subjects_failed??r.failing_subjects??'';
     const failedList=Array.isArray(failedRaw)?failedRaw.join('، '):String(failedRaw||'').trim();
