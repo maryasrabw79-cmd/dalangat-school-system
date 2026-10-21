@@ -152,6 +152,6 @@ body{background:#eaf7f4}
 @media(max-width:560px){.home-hero{padding:14px 12px 0}.school-emblem{float:none;width:112px;height:112px;margin:0 auto 8px}.home-identity{min-height:0}.home-tabs{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:12px 2px 20px}.home-tabs button{min-height:112px;border-radius:18px;font-size:14px}.home-tabs .tile-icon{font-size:37px}.home-footer{margin:0 -12px}.home-directorate{font-size:25px}.home-administration{font-size:19px;padding:5px 16px}.home-school-name{font-size:23px}}
 
 /* Corrected school emblem */
- .school-emblem-img{float:left;display:block;width:clamp(64px,7vw,92px);height:auto;aspect-ratio:1;object-fit:contain;margin:2px 16px 8px 4px;border:0;border-radius:0;background:transparent;box-shadow:none}
-@media(max-width:900px){.school-emblem-img{width:78px;margin-right:10px}}
-@media(max-width:560px){.school-emblem-img{float:none;width:64px;height:auto;margin:0 auto 8px}}
+  .school-emblem-img{float:left;display:block;width:48px;height:48px;max-width:48px;aspect-ratio:1;object-fit:contain;margin:2px 10px 6px 4px;border:0;border-radius:0;background:transparent;box-shadow:none}
+@media(max-width:900px){.school-emblem-img{width:48px;height:48px;max-width:48px;margin-right:8px}}
+@media(max-width:560px){.school-emblem-img{float:none;width:42px;height:42px;max-width:42px;margin:0 auto 6px}}
