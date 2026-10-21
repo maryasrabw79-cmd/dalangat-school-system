@@ -51,7 +51,7 @@
     finally{btn.disabled=false;btn.textContent='عرض الشهادة';}
   }
   function renderStudentCertificate(r,remaining){
-    const subjects=r.subjects&&typeof r.subjects==='object'?Object.entries(r.subjects):[];
+    const nonSubjectHeader=/^(?:الديانة|ديانة الطالبة|ديانة|رقم الجلوس|رقم جلوس|جلوس|seat(?: number|_no|_number)?|religion|national id|الرقم القومي|اسم الطالبة|اسم الطالب|اسم التلميذة|الاسم)$/i;\n    const subjects=r.subjects&&typeof r.subjects==='object'?Object.entries(r.subjects).filter(([name])=>!nonSubjectHeader.test(String(name).trim())):[];
     const escText=v=>esc(v===null||v===undefined||String(v).trim()===''?'—':v);
     const failedRaw=r.failed_subjects??r.subjects_failed??r.failing_subjects??'';
     const failedList=Array.isArray(failedRaw)?failedRaw.join('، '):String(failedRaw||'').trim();
@@ -214,8 +214,8 @@
         if(best){headerRow=best.hi;headers=best.candidate.slice();while(headers.length<=Math.max(best.ci,best.cn))headers.push('');idI=best.ci;nameI=best.cn;if(!headers[idI])headers[idI]='الرقم القومي';if(!headers[nameI])headers[nameI]='اسم الطالبة';}
       }
       if(headerRow<0)throw new Error('لم أتمكن من تحديد عمود الرقم القومي وعمود اسم الطالبة. تأكد أن الشيت يحتوي على أرقام قومية صحيحة وأسماء طالبات في صفوف البيانات.');
-      const gradeI=examField(headers,['الصف','الصف الدراسي','المرحلة','grade','year']),sectionI=examField(headers,['الفصل','الشعبة','section','class']),specI=examField(headers,['التخصص','الشعبة التخصصية','specialization','specialty']),seatI=examField(headers,['رقم الجلوس','رقم جلوس','جلوس','seat number','seat_no','seat_number']),totalI=examField(headers,['المجموع','المجموع الكلي','total','total score','total_score']),maxI=examField(headers,['النهاية العظمى','المجموع النهائي','الدرجة النهائية','max total','max_total','maximum']),pctI=examField(headers,['النسبة','النسبة المئوية','percentage','percent']),statusI=examField(headers,['النتيجة','حالة النتيجة','الحالة العامة','حالة الطالب','حالة الطالبة','result','result status','result_status']),failedI=examField(headers,['مواد الرسوب','مواد الدور الثاني','مواد التخلف','failed subjects','subjects failed']);
-      const reserved=new Set([idI,nameI,gradeI,sectionI,specI,seatI,totalI,maxI,pctI,statusI,failedI].filter(i=>i>=0)),subjectHeaders=headers.map((h,i)=>({h,i})).filter(x=>x.h&&!reserved.has(x.i)),rows=[],errors=[],seen=new Set();
+      const gradeI=examField(headers,['الصف','الصف الدراسي','المرحلة','grade','year']),sectionI=examField(headers,['الفصل','الشعبة','section','class']),specI=examField(headers,['التخصص','الشعبة التخصصية','specialization','specialty']),seatI=examField(headers,['رقم الجلوس','رقم جلوس','جلوس','seat number','seat_no','seat_number']),religionI=examField(headers,['الديانة','ديانة الطالبة','ديانة','religion']),totalI=examField(headers,['المجموع','المجموع الكلي','total','total score','total_score']),maxI=examField(headers,['النهاية العظمى','المجموع النهائي','الدرجة النهائية','max total','max_total','maximum']),pctI=examField(headers,['النسبة','النسبة المئوية','percentage','percent']),statusI=examField(headers,['النتيجة','حالة النتيجة','الحالة العامة','حالة الطالب','حالة الطالبة','result','result status','result_status']),failedI=examField(headers,['مواد الرسوب','مواد الدور الثاني','مواد التخلف','failed subjects','subjects failed']);
+      const reserved=new Set([idI,nameI,gradeI,sectionI,specI,seatI,religionI,totalI,maxI,pctI,statusI,failedI].filter(i=>i>=0)),subjectHeaders=headers.map((h,i)=>({h,i})).filter(x=>x.h&&!reserved.has(x.i)),rows=[],errors=[],seen=new Set();
       // التقط صف النهاية العظمى إذا كان موضوعًا مباشرة أسفل رؤوس الأعمدة.
       let maxMarksRow=null,dataStart=headerRow+1;
       const firstData=grid[dataStart]||[];
