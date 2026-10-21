@@ -188,7 +188,7 @@ body{background:#eaf7f4}
 .exam-admin-view #sectionMsg,.exam-admin-view .table-wrap,.exam-admin-view #refreshBtn{display:none!important}
 @media(max-width:600px){.student-certificate{padding:14px}.certificate-meta,.certificate-summary{grid-template-columns:1fr}.certificate-header h1{font-size:19px}}
 @media print{
-  @page{size:A4 portrait;margin:12mm}
+  @page{size:A4 landscape;margin:7mm}
   body *{visibility:hidden!important}
   #studentCertificateView,#studentCertificateView *{visibility:visible!important}
   #studentCertificateView{display:block!important;position:absolute;left:0;top:0;width:100%;margin:0!important;padding:0!important;border:0!important;box-shadow:none!important}
@@ -241,4 +241,10 @@ body{background:#eaf7f4}
   .certificate-summary>div{padding:5px;font-size:10px}
   .certificate-footer{margin-top:9px;padding-top:7px}
   .no-print{display:none!important}
+}
+
+@media print {
+ @page { size: landscape; margin: 7mm; }
+ #studentCertificateView { width: 100% !important; height: auto !important; }
+ .certificate-matrix .certificate-row-label { background: #f5f0df !important; color:#4f411e !important; white-space:nowrap; }
 }
