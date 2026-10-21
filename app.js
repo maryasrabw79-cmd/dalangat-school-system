@@ -111,7 +111,7 @@
     $('#examImportBtn').addEventListener('click',importExamWorkbook);$('#examTemplateBtn').addEventListener('click',downloadExamTemplate);$('#examSearchBtn').addEventListener('click',loadExamResults);$('#examSearch').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();loadExamResults();}});$('#examExportBtn').addEventListener('click',exportExamResults);
     await loadExamResults();
   }
-  function examHeader(value){return String(value??'').trim().toLowerCase().replace(/[أإآ]/g,'ا').replace(/[ى]/g,'ي').replace(/[ؤئ]/g,'ء').replace(/[\s_\-./\\()]+/g,'');}
+  function examHeader(value){return String(value??'').trim().toLowerCase().replace(/[أإآ]/g,'ا').replace(/[ى]/g,'ي').replace(/[ؤئ]/g,'ء').replace(/[\s_\-\.\/\\()]+/g,'');}
   function examField(headers,aliases){const wanted=aliases.map(examHeader);return headers.findIndex(h=>wanted.includes(examHeader(h)));}
   function examCell(row,index){return index<0?'':row[index]===undefined||row[index]===null?'':String(row[index]).trim();}
   function examId(value){if(typeof value==='number'&&Number.isFinite(value))return String(Math.trunc(value));return String(value??'').trim().replace(/[\s-]/g,'').replace(/\.0$/,'');}
