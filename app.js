@@ -114,7 +114,7 @@
   function examHeader(value){return String(value??'').trim().toLowerCase().replace(/[أإآ]/g,'ا').replace(/[ى]/g,'ي').replace(/[ؤئ]/g,'ء').replace(/[\s_\-\.\/\\()]+/g,'');}
   function examField(headers,aliases){const wanted=aliases.map(examHeader);return headers.findIndex(h=>wanted.includes(examHeader(h)));}
   function examCell(row,index){return index<0?'':row[index]===undefined||row[index]===null?'':String(row[index]).trim();}
-  function examId(value){if(typeof value==='number'&&Number.isFinite(value))return String(Math.trunc(value));return String(value??'').trim().replace(/[\s-]/g,'').replace(/\.0$/,'');}
+  function examId(value){const digits=v=>String(v??'').replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/[۰-۹]/g,d=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));if(typeof value==='number'&&Number.isFinite(value))return String(Math.trunc(value));let v=digits(value).trim().replace(/[\s\-٬,]/g,'').replace(/\.0$/,'');if(/^\d+(?:\.\d+)?e[+\-]?\d+$/i.test(v)){const n=Number(v);if(Number.isFinite(n)&&n>=0&&Number.isInteger(n))v=String(n);}return v;}
   async function importExamWorkbook(){
     const btn=$('#examImportBtn'),msg=$('#examImportMsg'),file=$('#examExcelFile').files[0],year=$('#examAcademicYear').value.trim(),round=$('#examRound').value;
     if(!admin()){msg.className='message error';msg.textContent='ليس لديك صلاحية استيراد النتائج.';return;}
@@ -123,7 +123,7 @@
     if(typeof XLSX==='undefined'){msg.className='message error';msg.textContent='تعذر تحميل قارئ Excel. حدّث الصفحة وحاول مرة أخرى.';return;}
     btn.disabled=true;msg.className='message';msg.textContent='جارٍ قراءة الملف وفحص البيانات...';
     try{
-      const book=XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:false}),sheet=book.Sheets[book.SheetNames[0]],grid=XLSX.utils.sheet_to_json(sheet,{header:1,defval:'',raw:false});
+      const book=XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:false}),sheet=book.Sheets[book.SheetNames[0]],grid=XLSX.utils.sheet_to_json(sheet,{header:1,defval:'',raw:true});
       if(grid.length<2)throw new Error('الملف لا يحتوي على صفوف بيانات.');
       // ابحث عن صف العناوين ضمن أول 10 صفوف، حتى لو سبقته عناوين أو بيانات المدرسة.
       const idAliases=['الرقم القومي','رقم قومي','الرقم القومى','رقم الطالبة القومي','الرقم القومي للطالبة','national_id','national id','nationalid','national identity','id number'];
