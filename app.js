@@ -52,14 +52,12 @@
   }
   function renderStudentCertificate(r,remaining){
     const subjects=r.subjects&&typeof r.subjects==='object'?Object.entries(r.subjects):[];
-    const subjectStatuses=r.subject_statuses&&typeof r.subject_statuses==='object'?r.subject_statuses:{};
     const escText=v=>esc(v===null||v===undefined||String(v).trim()===''?'—':v);
     const failedRaw=r.failed_subjects??r.subjects_failed??r.failing_subjects??'';
     const failedList=Array.isArray(failedRaw)?failedRaw.join('، '):String(failedRaw||'').trim();
     const subjectNames=subjects.length?subjects.map(([name])=>'<th>'+esc(name)+'</th>').join(''):'<th>لا توجد مواد مسجلة</th>';
     const totals=subjects.length?subjects.map(([name])=>'<td>'+escText((r.subject_max_marks&&r.subject_max_marks[name])??(r.max_marks&&r.max_marks[name])??'—')+'</td>').join(''):'<td>—</td>';
     const marks=subjects.length?subjects.map(([name,mark])=>'<td>'+escText(mark)+'</td>').join(''):'<td>—</td>';
-    const statuses=subjects.length?subjects.map(([name])=>'<td>'+escText(subjectStatuses[name]??'—')+'</td>').join(''):'<td>—</td>';
     const seatNo=r.seat_number??r.seating_number??r.exam_seat_number??r.seat_no??'غير مسجل';
     const meta=[['اسم الطالبة',r.full_name],['الرقم القومي',r.national_id],['رقم الجلوس',seatNo],['الصف',r.grade],['الفصل',r.section],['التخصص',r.specialization],['العام الدراسي',r.academic_year],['الدور',r.exam_round]].filter(x=>x[1]!==null&&x[1]!==undefined&&String(x[1]).trim()!=='');
     const status=String(r.result_status??r.status??'غير محددة').trim()||'غير محددة';
