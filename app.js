@@ -1,6 +1,7 @@
 (() => {
   'use strict';
   const $ = (s) => document.querySelector(s);
+  const $$ = (s) => document.querySelectorAll(s);
   const cfg = window.SCHOOL_DB_CONFIG || {};
   const state = { client:null, user:null, profile:null, role:'viewer', section:'employees', pendingAction:null, cache:{employees:[],students:[]}, rows:[], staffRecord:null };
   const sections = {
@@ -99,8 +100,6 @@
     renderTabs(); updateHomeTiles(); await loadStats(); const requested=state.pendingAction; state.pendingAction=null; if(requested==='export'){showExportOptions();return;} if(requested&&requested!=='users'&&sections[requested]&&allowedSections().includes(requested))state.section=requested; else if(requested==='users'&&admin())state.section='users'; if(!allowedSections().includes(state.section))state.section=allowedSections()[0]||'employees'; renderTabs(); $('#exportView').classList.add('hidden'); $('#dataView').classList.remove('hidden'); await loadSection(state.section);
   }
   function updateHomeTiles(){ const exportTiles=$('#homeTabs [data-home-section="export"]'); exportTiles.forEach((tile,index)=>{tile.classList.toggle('hidden',!admin());}); const admissionTile=$('#homeTabs [data-home-section="students"]'); if(admissionTile){const label=admissionTile.querySelector('span:last-child');if(label)label.textContent='القبول والتسجيل';} }
-  const $ = (s) => document.querySelector(s);
-  const $ = (s) => document.querySelectorAll(s);
   function allowedSections(){ if(admin())return [...Object.keys(sections),'national_ids','users']; if(state.role==='employee')return ['employees','students','leaves','training_courses']; return []; }
   function renderTabs(){ const nav=$('#tabs');nav.innerHTML=''; const allowed=allowedSections(); if(!allowed.length){nav.innerHTML='<span>لا توجد أقسام متاحة لهذا الحساب.</span>';return;} if(!allowed.includes(state.section))state.section=allowed[0]; allowed.forEach(key=>{const b=document.createElement('button');b.className='tab'+(key===state.section?' active':'');b.textContent=key==='users'?'إدارة المستخدمين':key==='national_ids'?'إضافة الأرقام القومية':sections[key].title;b.onclick=()=>{state.section=key;renderTabs();loadSection(key);};nav.appendChild(b);}); }
   async function renderUsers(){
