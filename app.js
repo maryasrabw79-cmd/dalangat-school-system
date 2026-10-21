@@ -39,6 +39,7 @@
     if(!state.user||!state.profile){state.pendingAction=action;showLogin();return;}
     if(action==='exam_results'){await openExamResults();return;}
     if(action==='export'){showExportOptions();$('#homeView').classList.add('hidden');$('#loginView').classList.add('hidden');$('#appView').classList.remove('hidden');$('#logoutBtn').classList.remove('hidden');return;}
+    $('#tabs').classList.remove('hidden');
     if(action==='users'&&!admin()){say('#sectionMsg','ليس لديك صلاحية إدارة المستخدمين.','error');return;}
     if(!sections[action]&&action!=='users'&&action!=='national_ids')return;
     if(!allowedSections().includes(action)){say('#sectionMsg','هذا القسم غير متاح لصلاحية حسابك.','error');return;}
