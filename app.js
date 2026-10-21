@@ -184,6 +184,9 @@
       if(!sheetGrids.length)throw new Error('الملف لا يحتوي على شيتات بيانات.');
       const baseGrid=sheetGrids[0].grid, baseHeaderIndex=baseGrid.findIndex(row=>row.some(v=>/الرقم القومي|national.?id/i.test(String(v??'')))&&row.some(v=>/اسم الطالبة|اسم الطالب|full.?name|student.?name/i.test(String(v??''))));
       const grid=baseGrid.map(row=>row.slice());
+      const baseHeaders=baseHeaderIndex>=0?baseGrid[baseHeaderIndex].map(v=>String(v??'').trim()):[];
+      const baseGradeIndex=baseHeaders.findIndex(v=>/^(الصف|الصف الدراسي|grade)$/i.test(v));
+      if(baseGradeIndex>=0&&baseHeaderIndex>=0){const defaultGrade=/الثاني|second|grade\s*2/i.test(sheetGrids[0].name)?'الثاني':'الأول';for(let ri=baseHeaderIndex+1;ri<grid.length;ri++)if(!String(grid[ri][baseGradeIndex]??'').trim()&&grid[ri].some(v=>String(v??'').trim()))grid[ri][baseGradeIndex]=defaultGrade;}
       for(const item of sheetGrids.slice(1)){
         const hi=item.grid.findIndex(row=>row.some(v=>/الرقم القومي|national.?id/i.test(String(v??'')))&&row.some(v=>/اسم الطالبة|اسم الطالب|full.?name|student.?name/i.test(String(v??''))));
         if(hi<0||baseHeaderIndex<0)throw new Error('تأكد أن كل شيت يحتوي على عناوين الرقم القومي واسم الطالبة.');
