@@ -40,7 +40,7 @@
     const btn=$('#studentResultsLoginForm button[type="submit"]');
     const nationalId=$('#studentExamNationalId').value.trim().replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
     const accessCode=$('#studentExamAccessCode').value.trim().replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
-    if(!/^\\d{14}$/.test(nationalId)||!/^\\d{6,8}$/.test(accessCode)){say('#studentExamLoginMsg','أدخلي رقمًا قوميًا من 14 رقمًا ورمز دخول من 6 أو 8 أرقام.','error');return;}
+    if(!/^\d{14}$/.test(nationalId)||!/^\d{6,8}$/.test(accessCode)){say('#studentExamLoginMsg','أدخلي رقمًا قوميًا من 14 رقمًا ورمز دخول من 6 أو 8 أرقام.','error');return;}
     btn.disabled=true;btn.textContent='جارٍ التحقق...';say('#studentExamLoginMsg','جارٍ التحقق من بيانات الدخول...');
     try{
       const response=await callAccessFunction({action:'student_exam_login',national_id:nationalId,access_code:accessCode});
