@@ -305,6 +305,8 @@ body{background:#eaf7f4}
    overflow-wrap: anywhere !important; word-break: break-word !important; box-sizing: border-box !important;
  }
  #studentCertificateHost .certificate-matrix .certificate-row-label { width: 18mm !important; min-width: 18mm !important; max-width: 18mm !important; }
+ #studentCertificateHost .certificate-matrix th:not(.certificate-row-label), #studentCertificateHost .certificate-matrix td { padding: 0.7mm 0.25mm !important; font-size: 7pt !important; line-height: 1.05 !important; }
+ #studentCertificateHost .certificate-matrix .certificate-row-label { width: 15mm !important; min-width: 15mm !important; max-width: 15mm !important; }
  #studentCertificateHost .certificate-header h1 { font-size: 15pt !important; }
  #studentCertificateHost .certificate-header h2 { font-size: 13pt !important; }
  #studentCertificateHost .certificate-header { margin-bottom: 3mm !important; padding-bottom: 2mm !important; }
