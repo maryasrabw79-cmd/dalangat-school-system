@@ -29,6 +29,7 @@
   function showLogin(){ $('#homeView').classList.add('hidden'); $('#registerView').classList.add('hidden'); $('#loginView').classList.remove('hidden'); $('#appView').classList.add('hidden'); $('#logoutBtn').classList.add('hidden'); $('#homeBtn').classList.remove('hidden'); }
   function showRegister(){ $('#homeView').classList.add('hidden'); $('#loginView').classList.add('hidden'); $('#registerView').classList.remove('hidden'); $('#appView').classList.add('hidden'); $('#logoutBtn').classList.add('hidden'); $('#homeBtn').classList.remove('hidden'); say('#registerMsg',''); }
   async function openHomeSelection(key){
+    if(key==='export'&&!admin()){say('#sectionMsg','استخراج ملفات Excel متاح لمدير النظام فقط.','error');return;}
     if(key==='home'){showHome();return;}
     if(key==='logout'){if(state.user){await logout();}else{showHome();}return;}
     const implemented=['employees','students','attendance','leaves','training_courses','staff_schedules','users','export'];
@@ -41,7 +42,7 @@
     if(!allowedSections().includes(action)){say('#sectionMsg','هذا القسم غير متاح لصلاحية حسابك.','error');return;}
     state.section=action;$('#homeView').classList.add('hidden');$('#loginView').classList.add('hidden');$('#appView').classList.remove('hidden');$('#logoutBtn').classList.remove('hidden');$('#exportView').classList.add('hidden');$('#dataView').classList.remove('hidden');renderTabs();await loadSection(action);
   }
-  function showExportOptions(){ $('#exportView').classList.remove('hidden'); $('#dataView').classList.add('hidden'); const select=$('#exportSectionSelect'); const keys=admin()?[...Object.keys(sections),'national_ids','users']:allowedSections().filter(k=>k!=='users'); select.innerHTML=keys.map(k=>`<option value="${esc(k)}">${esc(k==='users'?'إدارة المستخدمين':k==='national_ids'?'إضافة الأرقام القومية المسموح لها بالتسجيل':sections[k]?.title||k)}</option>`).join(''); $('#exportMsg').textContent=''; }
+  function showExportOptions(){ if(!admin()){ $('#exportView').classList.add('hidden'); $('#dataView').classList.remove('hidden'); say('#sectionMsg','استخراج ملفات Excel متاح لمدير النظام فقط.','error'); return; } $('#exportView').classList.remove('hidden'); $('#dataView').classList.add('hidden'); const select=$('#exportSectionSelect'); const keys=admin()?[...Object.keys(sections),'national_ids','users']:allowedSections().filter(k=>k!=='users'); select.innerHTML=keys.map(k=>`<option value="${esc(k)}">${esc(k==='users'?'إدارة المستخدمين':k==='national_ids'?'إضافة الأرقام القومية المسموح لها بالتسجيل':sections[k]?.title||k)}</option>`).join(''); $('#exportMsg').textContent=''; }
   async function login(e){
     e.preventDefault();
     const button=$('#loginForm button[type="submit"]');
@@ -95,9 +96,11 @@
       return;
     }
     $('#loginView').classList.add('hidden');$('#appView').classList.remove('hidden');$('#logoutBtn').classList.remove('hidden');$('#welcomeTitle').textContent='أهلًا بك في منظومة المدرسة';$('#roleLabel').textContent='صلاحيتك: '+humanRole(state.role);
-    renderTabs(); await loadStats(); const requested=state.pendingAction; state.pendingAction=null; if(requested==='export'){showExportOptions();return;} if(requested&&requested!=='users'&&sections[requested]&&allowedSections().includes(requested))state.section=requested; else if(requested==='users'&&admin())state.section='users'; if(!allowedSections().includes(state.section))state.section=allowedSections()[0]||'employees'; renderTabs(); $('#exportView').classList.add('hidden'); $('#dataView').classList.remove('hidden'); await loadSection(state.section);
+    renderTabs(); updateHomeTiles(); await loadStats(); const requested=state.pendingAction; state.pendingAction=null; if(requested==='export'){showExportOptions();return;} if(requested&&requested!=='users'&&sections[requested]&&allowedSections().includes(requested))state.section=requested; else if(requested==='users'&&admin())state.section='users'; if(!allowedSections().includes(state.section))state.section=allowedSections()[0]||'employees'; renderTabs(); $('#exportView').classList.add('hidden'); $('#dataView').classList.remove('hidden'); await loadSection(state.section);
   }
-  function allowedSections(){ if(admin())return [...Object.keys(sections),'national_ids','users']; if(state.role==='employee')return ['employees','leaves','training_courses']; return []; }
+  function updateHomeTiles(){ const exportTiles=$('#homeTabs [data-home-section="export"]'); exportTiles.forEach((tile,index)=>{tile.classList.toggle('hidden',!admin());}); const admissionTile=$('#homeTabs [data-home-section="students"]'); if(admissionTile){const label=admissionTile.querySelector('span:last-child');if(label)label.textContent='القبول والتسجيل';} }
+  const $ = (s) => document.querySelectorAll(s);
+  function allowedSections(){ if(admin())return [...Object.keys(sections),'national_ids','users']; if(state.role==='employee')return ['employees','students','leaves','training_courses']; return []; }
   function renderTabs(){ const nav=$('#tabs');nav.innerHTML=''; const allowed=allowedSections(); if(!allowed.length){nav.innerHTML='<span>لا توجد أقسام متاحة لهذا الحساب.</span>';return;} if(!allowed.includes(state.section))state.section=allowed[0]; allowed.forEach(key=>{const b=document.createElement('button');b.className='tab'+(key===state.section?' active':'');b.textContent=key==='users'?'إدارة المستخدمين':key==='national_ids'?'إضافة الأرقام القومية':sections[key].title;b.onclick=()=>{state.section=key;renderTabs();loadSection(key);};nav.appendChild(b);}); }
   async function renderUsers(){
     $('#sectionTitle').textContent='إدارة المستخدمين';
