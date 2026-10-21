@@ -33,10 +33,11 @@
     if(key==='export'&&state.user&&!admin()){say('#sectionMsg','استخراج ملفات Excel متاح لمدير النظام فقط.','error');return;}
     if(key==='home'){showHome();return;}
     if(key==='logout'){if(state.user){await logout();}else{showHome();}return;}
-    const implemented=['employees','students','attendance','leaves','training_courses','staff_schedules','users','export'];
+    const implemented=['employees','students','attendance','leaves','training_courses','staff_schedules','users','export','exam_results'];
     if(!implemented.includes(key)){window.alert('هذا القسم ظاهر في الواجهة الجديدة، لكن وظيفته التفصيلية لم تُبرمج بعد.');return;}
     const action=key==='export'?'export':key;
     if(!state.user||!state.profile){state.pendingAction=action;showLogin();return;}
+    if(action==='exam_results'){await openExamResults();return;}
     if(action==='export'){showExportOptions();$('#homeView').classList.add('hidden');$('#loginView').classList.add('hidden');$('#appView').classList.remove('hidden');$('#logoutBtn').classList.remove('hidden');return;}
     if(action==='users'&&!admin()){say('#sectionMsg','ليس لديك صلاحية إدارة المستخدمين.','error');return;}
     if(!sections[action]&&action!=='users'&&action!=='national_ids')return;
@@ -97,7 +98,85 @@
       return;
     }
     $('#loginView').classList.add('hidden');$('#appView').classList.remove('hidden');$('#logoutBtn').classList.remove('hidden');$('#welcomeTitle').textContent='أهلًا بك في منظومة المدرسة';$('#roleLabel').textContent='صلاحيتك: '+humanRole(state.role);
-    renderTabs(); updateHomeTiles(); await loadStats(); const requested=state.pendingAction; state.pendingAction=null; if(requested==='export'){showExportOptions();return;} if(requested&&requested!=='users'&&sections[requested]&&allowedSections().includes(requested))state.section=requested; else if(requested==='users'&&admin())state.section='users'; if(!allowedSections().includes(state.section))state.section=allowedSections()[0]||'employees'; renderTabs(); $('#exportView').classList.add('hidden'); $('#dataView').classList.remove('hidden'); await loadSection(state.section);
+    renderTabs(); updateHomeTiles(); await loadStats(); const requested=state.pendingAction; state.pendingAction=null; if(requested==='export'){showExportOptions();return;} if(requested==='exam_results'){await openExamResults();return;} if(requested&&requested!=='users'&&sections[requested]&&allowedSections().includes(requested))state.section=requested; else if(requested==='users'&&admin())state.section='users'; if(!allowedSections().includes(state.section))state.section=allowedSections()[0]||'employees'; renderTabs(); $('#exportView').classList.add('hidden'); $('#dataView').classList.remove('hidden'); await loadSection(state.section);
+  }
+  async function openExamResults(){
+    if(!admin()){showHome();window.alert('قسم نتائج الامتحانات متاح لمدير النظام فقط.');return;}
+    $('#homeView').classList.add('hidden');$('#loginView').classList.add('hidden');$('#appView').classList.remove('hidden');$('#logoutBtn').classList.remove('hidden');
+    $('#exportView').classList.add('hidden');$('#dataView').classList.remove('hidden');$('#tabs').classList.add('hidden');
+    $('#sectionTitle').textContent='نتائج الامتحانات';$('#sectionDesc').textContent='رفع شيت Excel وحفظ نتائج الطالبات للبحث والرجوع إليها.';
+    $('#formHost').innerHTML='<div class="exam-import-panel"><div class="form-grid"><label>العام الدراسي<input id="examAcademicYear" type="text" value="2026/2027" required></label><label>الدور / الفصل الامتحاني<select id="examRound"><option>الدور الأول</option><option>الدور الثاني</option><option>الفصل الدراسي الأول</option><option>الفصل الدراسي الثاني</option><option>امتحان آخر</option></select></label><label>ملف Excel (.xlsx أو .xls)<input id="examExcelFile" type="file" accept=".xlsx,.xls,.csv" required></label></div><p>الأعمدة المطلوبة: الرقم القومي، اسم الطالبة. ويمكن إضافة الصف والتخصص وأعمدة درجات المواد والمجموع والنسبة والنتيجة.</p><div class="form-actions"><button id="examImportBtn" type="button">قراءة الشيت وحفظ النتائج</button><button id="examTemplateBtn" type="button" class="secondary">تنزيل نموذج Excel</button></div><div id="examImportMsg" class="message" aria-live="polite"></div><div class="form-grid"><label>بحث بالاسم أو الرقم القومي<input id="examSearch" type="search" placeholder="اكتب الاسم أو الرقم القومي"></label><label>تصفية العام الدراسي<input id="examSearchYear" type="text" value="2026/2027"></label><label>تصفية الدور<select id="examSearchRound"><option>الدور الأول</option><option>الدور الثاني</option><option>الفصل الدراسي الأول</option><option>الفصل الدراسي الثاني</option><option>امتحان آخر</option></select></label></div><div class="form-actions"><button id="examSearchBtn" type="button">عرض النتائج</button><button id="examExportBtn" type="button" class="secondary">تصدير النتائج إلى Excel</button></div></div>';
+    $('#tableHead').innerHTML='';$('#tableBody').innerHTML='';
+    $('#examImportBtn').addEventListener('click',importExamWorkbook);$('#examTemplateBtn').addEventListener('click',downloadExamTemplate);$('#examSearchBtn').addEventListener('click',loadExamResults);$('#examSearch').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();loadExamResults();}});$('#examExportBtn').addEventListener('click',exportExamResults);
+    await loadExamResults();
+  }
+  function examHeader(value){return String(value??'').trim().toLowerCase().replace(/[أإآ]/g,'ا').replace(/[ى]/g,'ي').replace(/[ؤئ]/g,'ء').replace(/[\s_\-./\\()]+/g,'');}
+  function examField(headers,aliases){const wanted=aliases.map(examHeader);return headers.findIndex(h=>wanted.includes(examHeader(h)));}
+  function examCell(row,index){return index<0?'':row[index]===undefined||row[index]===null?'':String(row[index]).trim();}
+  function examId(value){if(typeof value==='number'&&Number.isFinite(value))return String(Math.trunc(value));return String(value??'').trim().replace(/[\s-]/g,'').replace(/\.0$/,'');}
+  async function importExamWorkbook(){
+    const btn=$('#examImportBtn'),msg=$('#examImportMsg'),file=$('#examExcelFile').files[0],year=$('#examAcademicYear').value.trim(),round=$('#examRound').value;
+    if(!admin()){msg.className='message error';msg.textContent='ليس لديك صلاحية استيراد النتائج.';return;}
+    if(!file){msg.className='message error';msg.textContent='اختر ملف Excel أولًا.';return;}
+    if(!year){msg.className='message error';msg.textContent='اكتب العام الدراسي.';return;}
+    if(typeof XLSX==='undefined'){msg.className='message error';msg.textContent='تعذر تحميل قارئ Excel. حدّث الصفحة وحاول مرة أخرى.';return;}
+    btn.disabled=true;msg.className='message';msg.textContent='جارٍ قراءة الملف وفحص البيانات...';
+    try{
+      const book=XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:false}),sheet=book.Sheets[book.SheetNames[0]],grid=XLSX.utils.sheet_to_json(sheet,{header:1,defval:'',raw:false});
+      if(grid.length<2)throw new Error('الملف لا يحتوي على صفوف بيانات.');
+      const headers=grid[0].map(v=>String(v??'').trim()),idI=examField(headers,['الرقم القومي','رقم قومي','الرقم القومى','national_id','national id','nationalid','رقم الطالبة القومي']),nameI=examField(headers,['اسم الطالبة','اسم الطالب','الاسم','اسم الطالبه','full_name','student name','name']);
+      if(idI<0||nameI<0)throw new Error('لم أجد عمودي «الرقم القومي» و«اسم الطالبة» في الصف الأول من الشيت.');
+      const gradeI=examField(headers,['الصف','الصف الدراسي','المرحلة','grade','year']),sectionI=examField(headers,['الفصل','الشعبة','section','class']),specI=examField(headers,['التخصص','الشعبة التخصصية','specialization','specialty']),totalI=examField(headers,['المجموع','المجموع الكلي','total','total score','total_score']),maxI=examField(headers,['النهاية العظمى','المجموع النهائي','الدرجة النهائية','max total','max_total','maximum']),pctI=examField(headers,['النسبة','النسبة المئوية','percentage','percent']),statusI=examField(headers,['النتيجة','حالة النتيجة','الحالة','result','result status','result_status']);
+      const reserved=new Set([idI,nameI,gradeI,sectionI,specI,totalI,maxI,pctI,statusI].filter(i=>i>=0)),subjectHeaders=headers.map((h,i)=>({h,i})).filter(x=>x.h&&!reserved.has(x.i)),rows=[],errors=[],seen=new Set();
+      for(let ri=1;ri<grid.length;ri++){
+        const cells=grid[ri];if(!cells.some(v=>String(v??'').trim()))continue;
+        const national_id=examId(cells[idI]),full_name=examCell(cells,nameI);
+        if(!/^\d{14}$/.test(national_id)){errors.push('الصف '+(ri+1)+': الرقم القومي ليس 14 رقمًا.');continue;}
+        if(!full_name){errors.push('الصف '+(ri+1)+': اسم الطالبة فارغ.');continue;}
+        const grade=examCell(cells,gradeI)||'غير محدد',key=[national_id,year,round,grade].join('|');
+        if(seen.has(key)){errors.push('الصف '+(ri+1)+': تكرار الرقم القومي لنفس العام والدور والصف.');continue;}seen.add(key);
+        const subjects={};for(const col of subjectHeaders){const raw=examCell(cells,col.i);if(raw!=='')subjects[col.h]=raw;}
+        const numericSubjects=subjectHeaders.map(col=>({raw:examCell(cells,col.i)})).filter(x=>x.raw!=='').map(x=>Number(x.raw.replace(/,/g,''))).filter(Number.isFinite);
+        const totalRaw=examCell(cells,totalI),maxRaw=examCell(cells,maxI),pctRaw=examCell(cells,pctI);
+        const total=totalRaw!==''&&Number.isFinite(Number(totalRaw.replace(/,/g,'')))?Number(totalRaw.replace(/,/g,'')):numericSubjects.length?numericSubjects.reduce((a,b)=>a+b,0):null;
+        const maxTotal=maxRaw!==''&&Number.isFinite(Number(maxRaw.replace(/,/g,'')))?Number(maxRaw.replace(/,/g,'')):null;
+        const percentage=pctRaw!==''&&Number.isFinite(Number(pctRaw.replace(/[% ,]/g,'')))?Number(pctRaw.replace(/[% ,]/g,'')):(total!==null&&maxTotal>0?Math.round(total/maxTotal*10000)/100:null);
+        rows.push({national_id,full_name,grade,section:examCell(cells,sectionI)||null,specialization:examCell(cells,specI)||null,academic_year:year,exam_round:round,subjects,total,max_total:maxTotal,percentage,result_status:examCell(cells,statusI)||null,source_file:file.name,imported_by:state.user.id});
+      }
+      if(!rows.length)throw new Error('لم توجد صفوف صالحة للحفظ. '+errors.slice(0,4).join(' '));
+      let saved=0;for(let i=0;i<rows.length;i+=100){const {error}=await state.client.from('exam_results').upsert(rows.slice(i,i+100),{onConflict:'national_id,academic_year,exam_round,grade'});if(error)throw new Error('تعذر حفظ النتائج في قاعدة البيانات: '+error.message);saved+=Math.min(100,rows.length-i);}
+      msg.className='message '+(errors.length?'error':'success');msg.textContent='تم حفظ/تحديث '+saved+' نتيجة من ملف «'+file.name+'». '+(errors.length?'تم تجاوز '+errors.length+' صف غير صالح. أول الملاحظات: '+errors.slice(0,5).join(' | '):'لم توجد أخطاء في الصفوف.')+' عند إعادة رفع نفس العام والدور والصف يتم تحديث السجل بدل تكراره.';
+      $('#examSearchYear').value=year;$('#examSearchRound').value=round;await loadExamResults();
+    }catch(err){msg.className='message error';msg.textContent='تعذر استيراد الشيت: '+(err?.message||String(err));}
+    finally{btn.disabled=false;}
+  }
+  async function loadExamResults(){
+    const body=$('#tableBody');if(!body||!admin())return;
+    body.innerHTML='<tr><td class="empty" colspan="8">جارٍ تحميل النتائج...</td></tr>';
+    const year=$('#examSearchYear')?.value.trim()||'2026/2027',round=$('#examSearchRound')?.value||'الدور الأول',term=$('#examSearch')?.value.trim()||'';
+    let query=state.client.from('exam_results').select('*').eq('academic_year',year).eq('exam_round',round).order('full_name').limit(2000);
+    if(/^\d{14}$/.test(examId(term)))query=query.eq('national_id',examId(term));
+    const {data,error}=await query;
+    if(error){$('#tableHead').innerHTML='';body.innerHTML='';say('#sectionMsg','تعذر تحميل نتائج الامتحانات: '+error.message,'error');return;}
+    let rows=data||[];if(term&&!/^\d{14}$/.test(examId(term)))rows=rows.filter(r=>String(r.full_name||'').includes(term));
+    $('#tableHead').innerHTML='<tr><th>الرقم القومي</th><th>اسم الطالبة</th><th>الصف</th><th>التخصص</th><th>المواد والدرجات</th><th>المجموع</th><th>النسبة</th><th>النتيجة</th></tr>';
+    if(!rows.length){body.innerHTML='<tr><td class="empty" colspan="8">لا توجد نتائج مطابقة. ارفع شيت Excel أو غيّر البحث والعام والدور.</td></tr>';return;}
+    body.innerHTML=rows.map(r=>'<tr><td>'+esc(r.national_id)+'</td><td>'+esc(r.full_name)+'</td><td>'+esc(r.grade||'—')+'</td><td>'+esc(r.specialization||'—')+'</td><td>'+esc(Object.entries(r.subjects||{}).map(([k,v])=>k+': '+v).join('، ')||'—')+'</td><td>'+esc(r.total??'—')+(r.max_total!==null&&r.max_total!==undefined?' / '+esc(r.max_total):'')+'</td><td>'+esc(r.percentage??'—')+(r.percentage!==null&&r.percentage!==undefined?'%':'')+'</td><td>'+esc(r.result_status||'—')+'</td></tr>').join('');
+    say('#sectionMsg','عدد النتائج المعروضة: '+rows.length+(rows.length===2000?' (تم الوصول إلى حد العرض 2000 نتيجة)':''),'success');
+  }
+  function downloadExamTemplate(){
+    if(typeof XLSX==='undefined'){window.alert('مكتبة Excel غير متاحة.');return;}
+    const sample=[['الرقم القومي','اسم الطالبة','الصف','الفصل','التخصص','لغة عربية','لغة إنجليزية','رياضيات','المجموع','النهاية العظمى','النسبة المئوية','النتيجة'],['12345678901234','اسم تجريبي','الأول','1/1','فني تكنولوجيا الحاسبات',80,75,90,245,300,81.67,'ناجحة']];
+    const ws=XLSX.utils.aoa_to_sheet(sample);ws['!views']=[{rightToLeft:true}];ws['!cols']=[{wch:20},{wch:28},{wch:14},{wch:12},{wch:28},{wch:14},{wch:16},{wch:14},{wch:12},{wch:16},{wch:16},{wch:16}];
+    const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'نتائج الامتحانات');XLSX.writeFile(wb,'نموذج_نتائج_الامتحانات.xlsx');
+  }
+  async function exportExamResults(){
+    if(typeof XLSX==='undefined'){window.alert('مكتبة Excel غير متاحة.');return;}
+    const year=$('#examSearchYear')?.value.trim()||'2026/2027',round=$('#examSearchRound')?.value||'الدور الأول';
+    const {data,error}=await state.client.from('exam_results').select('*').eq('academic_year',year).eq('exam_round',round).order('full_name').limit(5000);
+    if(error){say('#sectionMsg','تعذر تصدير النتائج: '+error.message,'error');return;}
+    const rows=(data||[]).map(r=>({'الرقم القومي':r.national_id,'اسم الطالبة':r.full_name,'الصف':r.grade,'الفصل':r.section,'التخصص':r.specialization,'المواد والدرجات':Object.entries(r.subjects||{}).map(([k,v])=>k+': '+v).join(' | '),'المجموع':r.total,'النهاية العظمى':r.max_total,'النسبة المئوية':r.percentage,'النتيجة':r.result_status,'العام الدراسي':r.academic_year,'الدور':r.exam_round}));
+    const ws=XLSX.utils.json_to_sheet(rows);ws['!views']=[{rightToLeft:true}];const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'نتائج الامتحانات');XLSX.writeFile(wb,'نتائج_الامتحانات_'+year.replace('/','-')+'.xlsx');
   }
   function updateHomeTiles(){ document.querySelectorAll('#homeTabs [data-home-section="export"]').forEach(tile=>{tile.classList.toggle('hidden',!admin());}); document.querySelectorAll('#homeTabs [data-home-section="students"]').forEach(tile=>{tile.classList.toggle('hidden',!admin());}); document.querySelectorAll('#homeTabs [data-home-section="exam_results"]').forEach(tile=>{tile.classList.toggle('hidden',!admin());}); }
   function allowedSections(){ if(admin())return [...Object.keys(sections),'national_ids','users']; if(state.role==='employee')return ['employees','leaves','training_courses']; return []; }
