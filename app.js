@@ -55,15 +55,15 @@
     const rawSubjects=r.subjects&&typeof r.subjects==='object'?Object.entries(r.subjects).filter(([name])=>!nonSubjectHeader.test(String(name).trim())):[];
     const subjectOrder=['لغة عربية','اللغة العربية','عربي','لغة إنجليزية','اللغة الإنجليزية','انجليزي','إنجليزي','رياضيات','الرياضيات','فيزياء','الفيزياء','كيمياء','الكيمياء','دراسات اجتماعية','الدراسات الاجتماعية','حاسب آلي','الحاسب الآلي','الوحدة الأولى','الوحدة الاولى','الوحدة 1','الوحدة الثانية','الوحدة 2','الوحدة الثالثة','الوحدة الثالثه','الوحدة 3','الوحدة الرابعة','الوحدة الرابعه','الوحدة 4','الوحدة الخامسة','الوحدة الخامسه','الوحدة 5','الوحدة السادسة','الوحدة السادسه','الوحدة 6','الوحدة السابعة','الوحدة السابعه','الوحدة 7','الوحدة الثامنة','الوحدة الثامنه','الوحدة 8','الوحدة التاسعة','الوحدة التاسعه','الوحدة 9','تربية دينية','التربية الدينية','تربية دينيه','التربية الدينيه','تربية قومية','التربية القومية','تربيه قوميه','التربيه القوميه'];
     const orderIndex=name=>{const n=examHeader(name);const i=subjectOrder.findIndex(s=>examHeader(s)===n);return i<0?999:i;};
-    const subjects=rawSubjects.map((item,index)=>({item,index})).sort((a,b)=>orderIndex(a.item[0])-orderIndex(b.item[0])||a.index-b.index).map(x=>x.item);
+    const subjects=rawSubjects;
     const escText=v=>esc(v===null||v===undefined||String(v).trim()===''?'—':v);
-    const defaultMaxMarks={'لغة عربية':50,'اللغة العربية':50,'عربي':50,'لغة إنجليزية':40,'اللغة الإنجليزية':40,'انجليزي':40,'إنجليزي':40,'رياضيات':30,'الرياضيات':30,'فيزياء':20,'الفيزياء':20,'كيمياء':20,'الكيمياء':20,'دراسات اجتماعية':20,'الدراسات الإجتماعية':20,'الدراسات الاجتماعية':20,'حاسب آلي':20,'الحاسب الآلي':20,'تربية دينية':20,'التربية الدينية':20,'تربية دينيه':20,'التربية الدينيه':20,'تربية قومية':20,'التربية القومية':20,'تربيه قوميه':20,'التربيه القوميه':20};
-    const maxFor=name=>(r.subject_max_marks&&r.subject_max_marks[name])??(r.max_marks&&r.max_marks[name])??defaultMaxMarks[name]??'—';
+    remove default grades
     const failedRaw=r.failed_subjects??r.subjects_failed??r.failing_subjects??'';
     const failedList=Array.isArray(failedRaw)?failedRaw.join('، '):String(failedRaw||'').trim();
     const subjectRows=subjects.length?subjects.map(([name,mark])=>'<tr><td>'+esc(name)+'</td><td>'+escText(maxFor(name))+'</td><td>'+escText(mark)+'</td></tr>').join(''):'<tr><td colspan="3">لا توجد مواد مسجلة</td></tr>';
     const seatNo=[r.seat_number,r.seat_no,r.seating_number,r.exam_seat_number,r.seating_no,r.seatNumber,r.exam_seat].find(v=>v!==null&&v!==undefined&&String(v).trim()!=='')??'غير مسجل';
-    const meta=[['اسم الطالبة',r.full_name],['الرقم القومي',r.national_id],['رقم الجلوس',seatNo],['الصف',r.grade],['الفصل',r.section],['التخصص',r.specialization||r.department||r.trade||r.program||r.specialty],['العام الدراسي',r.academic_year],['الدور',r.exam_round]].filter(x=>x[1]!==null&&x[1]!==undefined&&String(x[1]).trim()!=='');
+    const specialization=String(r.specialization??r.department??r.trade??r.program??r.specialty??'').trim();
+    const meta=[['اسم الطالبة',r.full_name],['الرقم القومي',r.national_id],['رقم الجلوس',seatNo],['الصف',r.grade],['الفصل',r.section],['التخصص',specialization],['العام الدراسي',r.academic_year],['الدور',r.exam_round]].filter(x=>x[1]!==null&&x[1]!==undefined&&String(x[1]).trim()!=='');
     const gradeText=String(r.grade??'').trim();
     const gradeNum=(gradeText.match(/[123]/)||[])[0]||'';
     const nextGradeText=gradeNum==='1'?'الصف الثاني':gradeNum==='2'?'الصف الثالث':gradeNum==='3'?'الصف الرابع':(/الأول|الاول/.test(gradeText)?'الصف الثاني':/الثاني/.test(gradeText)?'الصف الثالث':/الثالث/.test(gradeText)?'الصف الرابع':'الصف التالي');
@@ -82,8 +82,8 @@
       $('#studentCertificateHost').innerHTML='<article class="student-certificate second-round-certificate" dir="rtl"><div class="certificate-ornament"><div class="congrats-top"><span class="congrats-star">✦</span><span>محافظة البحيرة</span><span class="congrats-star">✦</span></div><header class="certificate-header"><div class="certificate-ministry">إدارة الدلنجات التعليمية</div><h1>مدرسة الدلنجات الصناعية بنات</h1><div class="second-round-ribbon">إشعار بوجود دور ثانٍ</div></header><p class="second-round-intro">تُخطر إدارة المدرسة الطالبة الموضح بياناتها أدناه بأن نتيجة امتحانات النقل أسفرت عن وجود دور ثانٍ لها، وذلك في المواد التالية:</p><div class="certificate-meta">'+metaHtml+'</div><section class="second-round-subject-box"><h2>مواد الدور الثاني</h2><div class="second-round-subjects">'+esc(failedSubjects)+'</div></section>'+(r.total!==null&&r.total!==undefined&&String(r.total).trim()!==''?'<div class="second-round-total">المجموع: <strong>'+esc(r.total)+'</strong>'+(r.max_total!==null&&r.max_total!==undefined?' من '+esc(r.max_total)+' درجة':'')+'</div>':'')+'<p class="second-round-encouragement">نرجو الاستعداد الجيد لامتحانات الدور الثاني، ونتمنى للطالبة دوام التوفيق والنجاح.</p>'+footerHtml+'</div></article><p class="no-print certificate-usage-note">مرات الدخول المتبقية لهذا الرمز: '+esc(remaining)+' (من أصل 5).</p>';
     }else{
       const totalText=r.total!==null&&r.total!==undefined&&String(r.total).trim()!==''?String(r.total):'—';
-      const maxTotalText=r.max_total!==null&&r.max_total!==undefined&&String(r.max_total).trim()!==''?String(r.max_total):'200';
-      $('#studentCertificateHost').innerHTML='<article class="student-certificate congrats-certificate" dir="rtl"><div class="certificate-ornament"><div class="congrats-top"><span class="congrats-star">✦</span><span>محافظة البحيرة</span><span class="congrats-star">✦</span></div><header class="certificate-header"><div class="certificate-ministry">مديرية التربية والتعليم بالبحيرة</div><div class="certificate-administration">إدارة الدلنجات التعليمية</div><h1>مدرسة الدلنجات الصناعية بنات</h1><div class="congrats-ribbon">شهادة تهنئة بالنجاح</div></header><p class="congrats-message">تتقدم إدارة المدرسة بخالص التهنئة للطالبة</p><div class="congrats-student-name">'+esc(r.full_name||'الطالبة')+'</div><div class="certificate-meta">'+metaHtml+'</div><div class="congrats-promotion">مع أطيب الأمنيات بدوام التقدم والنجاح</div><div class="congrats-total-panel"><span>المجموع النهائي</span><strong>'+esc(totalText)+'</strong><small>من '+esc(maxTotalText)+' درجة</small></div><section class="certificate-result"><strong>النتيجة النهائية: ناجحة ومنقولة إلى '+esc(nextGradeText)+'</strong></section><footer class="certificate-footer"><span>مدير المدرسة<div class="signature-line"></div></span><span>رئيس الكنترول<div class="signature-line"></div></span></footer></div></article><p class="no-print certificate-usage-note">مرات الدخول المتبقية لهذا الرمز: '+esc(remaining)+' (من أصل 5).</p>';
+      const maxTotalText=r.max_total!==null&&r.max_total!==undefined&&String(r.max_total).trim()!==''?String(r.max_total):'—';
+      $('#studentCertificateHost').innerHTML='<article class="student-certificate congrats-certificate" dir="rtl"><div class="certificate-ornament"><div class="congrats-top"><span class="congrats-star">✦</span><span>محافظة البحيرة</span><span class="congrats-star">✦</span></div><header class="certificate-header"><div class="certificate-ministry">مديرية التربية والتعليم بالبحيرة</div><div class="certificate-administration">إدارة الدلنجات التعليمية</div><h1>مدرسة الدلنجات الصناعية بنات</h1><div class="congrats-ribbon">شهادة تهنئة بالنجاح</div></header><p class="congrats-message">تتقدم إدارة المدرسة بخالص التهنئة للطالبة</p><div class="congrats-student-name">'+esc(r.full_name||'الطالبة')+'</div>'+(specialization?'<div class="congrats-specialization"><span>التخصص</span><strong>'+esc(specialization)+'</strong></div>':'')+'<div class="certificate-meta">'+metaHtml+'</div><div class="congrats-promotion">مع أطيب الأمنيات بدوام التقدم والنجاح</div><div class="congrats-total-panel"><span>المجموع النهائي</span><strong>'+esc(totalText)+'</strong><small>من '+esc(maxTotalText)+' درجة</small></div><section class="certificate-result"><strong>النتيجة النهائية: ناجحة ومنقولة إلى '+esc(nextGradeText)+'</strong></section><footer class="certificate-footer"><span>مدير المدرسة<div class="signature-line"></div></span><span>رئيس الكنترول<div class="signature-line"></div></span></footer></div></article><p class="no-print certificate-usage-note">مرات الدخول المتبقية لهذا الرمز: '+esc(remaining)+' (من أصل 5).</p>';
     }
   }
   async function openStudentResultHome(){showHome();}
@@ -291,9 +291,9 @@
         const subjects={};for(const col of subjectHeaders){const raw=examCell(cells,col.i);if(raw!=='')subjects[col.h]=raw;}
         const numericSubjects=subjectHeaders.map(col=>({raw:examCell(cells,col.i)})).filter(x=>x.raw!=='').map(x=>Number(x.raw.replace(/,/g,''))).filter(Number.isFinite);
         const totalRaw=examCell(cells,totalI),maxRaw=examCell(cells,maxI),pctRaw=examCell(cells,pctI);
-        const total=totalRaw!==''&&Number.isFinite(Number(totalRaw.replace(/,/g,'')))?Number(totalRaw.replace(/,/g,'')):numericSubjects.length?numericSubjects.reduce((a,b)=>a+b,0):null;
+        const total=totalRaw!==''&&Number.isFinite(Number(totalRaw.replace(/,/g,'')))?Number(totalRaw.replace(/,/g,'')):null;
         const maxTotal=maxRaw!==''&&Number.isFinite(Number(maxRaw.replace(/,/g,'')))?Number(maxRaw.replace(/,/g,'')):null;
-        const percentage=pctRaw!==''&&Number.isFinite(Number(pctRaw.replace(/[% ,]/g,'')))?Number(pctRaw.replace(/[% ,]/g,'')):(total!==null&&maxTotal>0?Math.round(total/maxTotal*10000)/100:null);
+        const percentage=pctRaw!==''&&Number.isFinite(Number(pctRaw.replace(/[% ,]/g,'')))?Number(pctRaw.replace(/[% ,]/g,'')):null;
         rows.push({national_id,full_name,grade,section:examCell(cells,sectionI)||null,specialization:examCell(cells,specI)||null,seat_number:examCell(cells,seatI)||null,academic_year:year,exam_round:round,subjects,subject_max_marks:maxMarksRow||null,failed_subjects:examCell(cells,failedI)||null,total,max_total:maxTotal,percentage,result_status:examCell(cells,statusI)||null,source_file:file.name,imported_by:state.user.id});
       }
       if(!rows.length)throw new Error('لم توجد صفوف صالحة للحفظ. '+errors.slice(0,4).join(' '));
@@ -340,12 +340,12 @@
   }
   function downloadExamSummaryTemplate(){
     if(typeof XLSX==='undefined'){window.alert('مكتبة Excel غير متاحة.');return;}
-    const headers=['مسلسل','اسم الطالبة','الرقم القومي','رقم الجلوس','الصف','حالة الطالبة','مجموع الطالبة','المجموع الكلي','رئيس الكنترول','مدير المدرسة'];
+    const headers=['مسلسل','اسم الطالبة','الرقم القومي','رقم الجلوس','الصف','التخصص','حالة الطالبة','مجموع الطالبة','المجموع الكلي','رئيس الكنترول','مدير المدرسة'];
     const rows=[headers,...Array.from({length:100},()=>Array(headers.length).fill(''))];
     const ws=XLSX.utils.aoa_to_sheet(rows);
     ws['!views']=[{rightToLeft:true}];
-    ws['!cols']=[{wch:9},{wch:30},{wch:20},{wch:15},{wch:14},{wch:24},{wch:16},{wch:16},{wch:24},{wch:24}];
-    ws['!autofilter']={ref:'A1:J101'};
+    ws['!cols']=[{wch:9},{wch:30},{wch:20},{wch:15},{wch:14},{wch:28},{wch:24},{wch:16},{wch:16},{wch:24},{wch:24}];
+    ws['!autofilter']={ref:'A1:K101'};
     ws['!freeze']={xSplit:0,ySplit:1};
     const wb=XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb,ws,'ملخص النتائج');
