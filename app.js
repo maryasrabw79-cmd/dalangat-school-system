@@ -63,7 +63,7 @@
     const failedList=Array.isArray(failedRaw)?failedRaw.join('، '):String(failedRaw||'').trim();
     const subjectRows=subjects.length?subjects.map(([name,mark])=>'<tr><td>'+esc(name)+'</td><td>'+escText(maxFor(name))+'</td><td>'+escText(mark)+'</td></tr>').join(''):'<tr><td colspan="3">لا توجد مواد مسجلة</td></tr>';
     const seatNo=[r.seat_number,r.seat_no,r.seating_number,r.exam_seat_number,r.seating_no,r.seatNumber,r.exam_seat].find(v=>v!==null&&v!==undefined&&String(v).trim()!=='')??'غير مسجل';
-    const meta=[['اسم الطالبة',r.full_name],['الرقم القومي',r.national_id],['رقم الجلوس',seatNo],['الصف',r.grade],['الفصل',r.section],['التخصص',r.specialization],['العام الدراسي',r.academic_year],['الدور',r.exam_round]].filter(x=>x[1]!==null&&x[1]!==undefined&&String(x[1]).trim()!=='');
+    const meta=[['اسم الطالبة',r.full_name],['الرقم القومي',r.national_id],['رقم الجلوس',seatNo],['الصف',r.grade],['الفصل',r.section],['التخصص',r.specialization||r.department||r.trade||r.program||r.specialty],['العام الدراسي',r.academic_year],['الدور',r.exam_round]].filter(x=>x[1]!==null&&x[1]!==undefined&&String(x[1]).trim()!=='');
     const gradeText=String(r.grade??'').trim();
     const gradeNum=(gradeText.match(/[123]/)||[])[0]||'';
     const nextGradeText=gradeNum==='1'?'الصف الثاني':gradeNum==='2'?'الصف الثالث':gradeNum==='3'?'الصف الرابع':(/الأول|الاول/.test(gradeText)?'الصف الثاني':/الثاني/.test(gradeText)?'الصف الثالث':/الثالث/.test(gradeText)?'الصف الرابع':'الصف التالي');
