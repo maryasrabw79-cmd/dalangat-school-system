@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#123b65"><title>منظومة مدرسة الدلنجات الصناعية بنات</title>
-  <link rel="stylesheet" href="styles.css?v=support-page-bold-11">
+  <link rel="stylesheet" href="styles.css?v=library-reader-12">
 </head>
 <body>
   <header class="topbar"><div><div class="eyebrow">مديرية التربية والتعليم بالبحيرة</div><div class="header-education-admin">إدارة الدلنجات التعليمية</div><h1>مدرسة الدلنجات الصناعية بنات</h1></div><div class="topbar-actions"><div class="admin-signature">إدارة أ / ياسر الدقاق</div><button id="homeBtn" class="secondary" type="button">الرئيسية</button><button id="logoutBtn" class="secondary hidden">تسجيل الخروج</button></div></header>
@@ -18,10 +18,29 @@
       <div class="welcome panel"><div><h2 id="welcomeTitle">لوحة التحكم</h2><p id="roleLabel"></p></div><div class="stats" id="stats"></div></div>
       <nav id="tabs" class="tabs" aria-label="أقسام المنظومة"></nav>
       <section id="exportView" class="panel hidden"><h2>التصدير إلى Excel</h2><p>اختر القسم الذي تريد تصدير بياناته بعد تسجيل الدخول.</p><div class="export-controls"><label for="exportSectionSelect">القسم المطلوب تصديره<select id="exportSectionSelect"></select></label><button id="exportSelectedBtn" type="button">تصدير القسم المحدد إلى Excel</button></div><div id="exportMsg" class="message" aria-live="polite"></div></section>
+      <section id="libraryView" class="panel hidden">
+        <div class="section-head"><div><h2>المكتبة الإلكترونية</h2><p>تصفّح الكتب واقرأها داخل المنظومة.</p></div><button id="libraryRefreshBtn" class="secondary" type="button">تحديث الكتب</button></div>
+        <section id="libraryAdminPanel" class="library-admin-panel hidden">
+          <h3>إضافة كتاب جديد</h3>
+          <form id="libraryUploadForm" class="library-upload-form">
+            <label>اسم الكتاب<input id="libraryTitle" type="text" maxlength="180" required></label>
+            <label>المادة<input id="librarySubject" type="text" maxlength="100" placeholder="مثال: اللغة العربية"></label>
+            <label>الصف الدراسي<select id="libraryGrade"><option value="">كل الصفوف</option><option value="الأول">الصف الأول</option><option value="الثاني">الصف الثاني</option><option value="الثالث">الصف الثالث</option></select></label>
+            <label class="library-description-field">وصف مختصر (اختياري)<input id="libraryDescription" type="text" maxlength="400"></label>
+            <label class="library-file-field">ملف الكتاب PDF<input id="libraryFile" type="file" accept="application/pdf,.pdf" required></label>
+            <button id="libraryUploadBtn" type="submit">رفع الكتاب</button>
+            <div id="libraryAdminMsg" class="message" aria-live="polite"></div>
+          </form>
+        </section>
+        <div class="library-filters"><label>بحث عن كتاب<input id="librarySearch" type="search" placeholder="اكتب اسم الكتاب أو المادة"></label><label>تصفية حسب الصف<select id="libraryGradeFilter"><option value="">كل الصفوف</option><option value="الأول">الصف الأول</option><option value="الثاني">الصف الثاني</option><option value="الثالث">الصف الثالث</option></select></label></div>
+        <div id="libraryMsg" class="message" aria-live="polite"></div>
+        <div id="libraryBooksList" class="library-books-list"></div>
+        <section id="libraryReader" class="library-reader hidden"><div class="section-head"><h3 id="libraryReaderTitle">قراءة الكتاب</h3><button id="libraryCloseReaderBtn" class="secondary" type="button">إغلاق الكتاب</button></div><p class="library-reader-note">وضع القراءة داخل المنظومة. لا يظهر زر تنزيل داخل هذه الصفحة.</p><iframe id="libraryPdfFrame" title="قارئ الكتب" referrerpolicy="no-referrer" loading="lazy"></iframe></section>
+      </section>
       <section id="dataView" class="panel"><div class="section-head"><div><h2 id="sectionTitle">العاملون</h2><p id="sectionDesc"></p></div><div class="section-actions"><button id="refreshBtn" class="secondary">تحديث البيانات</button></div></div><div id="formHost"></div><div id="sectionMsg" class="message" aria-live="polite"></div><div class="table-wrap"><table><thead id="tableHead"></thead><tbody id="tableBody"></tbody></table></div></section>
     </section>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="config.js"></script><script src="app.js?v=year-end-results-subjects-29"></script>
+  <script src="config.js"></script><script src="app.js?v=private-library-30"></script>
 </body></html>
