@@ -22,7 +22,7 @@
     }
     state.client=window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey);
     $('#loginForm').addEventListener('submit',login); $('#studentResultsLoginForm').addEventListener('submit',submitStudentExamLogin); $('#studentExamBackBtn').addEventListener('click',showHome); $('#studentCertificateBackBtn').addEventListener('click',showHome); $('#studentCertificatePrintBtn').addEventListener('click',()=>window.print()); $('#registerForm').addEventListener('submit',activateAccount); $('#showRegisterBtn').addEventListener('click',showRegister); $('#backToLoginBtn').addEventListener('click',showLogin); $('#logoutBtn').addEventListener('click',logout); $('#refreshBtn').addEventListener('click',()=>loadSection(state.section)); $('#homeBtn').addEventListener('click',showHome); $('#exportSelectedBtn').addEventListener('click',()=>exportReportsToExcel($('#exportSectionSelect').value));
-    $('#homeTabs').querySelectorAll('[data-home-section]').forEach(b=>b.addEventListener('click',()=>openHomeSelection(b.dataset.homeSection)));
+    $('#homeTabs').querySelectorAll('[data-home-section]').forEach(b=>{b.addEventListener('click',async(e)=>{e.preventDefault();const key=b.dataset.homeSection;try{await openHomeSelection(key);}catch(err){console.error('Home tile error ('+key+'):',err);window.alert('تعذر فتح القسم. حدّث الصفحة، وإذا استمرت المشكلة أرسل لي نص الخطأ: '+(err?.message||String(err)));}});});
     state.client.auth.onAuthStateChange((_event,session)=>{ if(session?.user){ state.user=session.user; setTimeout(loadProfile,0); } else { state.user=null; state.profile=null; showLogin(); }});
     const {data:{session}}=await state.client.auth.getSession(); if(session?.user){state.user=session.user;await loadProfile();} else showHome();
   }
@@ -86,7 +86,7 @@
   }
   async function openStudentResultHome(){showHome();}
   async function openHomeSelection(key){
-    if(key==='exam_results'){if(state.user&&state.profile&&admin()){await openExamResults();}else{showStudentResultsLogin();}return;}
+    if(key==='exam_results'){if(admin()){await openExamResults();}else{showStudentResultsLogin();}return;}
     if(key==='export'&&state.user&&!admin()){say('#sectionMsg','استخراج ملفات Excel متاح لمدير النظام فقط.','error');return;}
     if(key==='home'){showHome();return;}
     if(key==='logout'){if(state.user){await logout();}else{showHome();}return;}
