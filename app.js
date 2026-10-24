@@ -336,18 +336,28 @@
     XLSX.utils.book_append_sheet(wb,makeSheet('الثاني'),'الصف الثاني');
     XLSX.writeFile(wb,'نموذج_نتائج_الامتحانات_الصف_الأول_والثاني.xlsx');
   }
-  function downloadExamSummaryTemplate(){
+  async function downloadExamSummaryTemplate(){
     if(typeof XLSX==='undefined'){window.alert('مكتبة Excel غير متاحة.');return;}
     const headers=['مسلسل','اسم الطالبة','الرقم القومي','رقم الجلوس','الصف','التخصص','حالة الطالبة','مجموع الطالبة','المجموع الكلي','مواد الدور الثاني','رئيس الكنترول','مدير المدرسة'];
-    const rows=[headers,...Array.from({length:100},()=>Array(headers.length).fill(''))];
+    const year=$('#examAcademicYear')?.value.trim()||'2026/2027';
+    const {data,error}=await state.client.from('exam_results').select('*').eq('academic_year',year).eq('exam_round','الدور الأول').order('full_name').limit(5000);
+    if(error){say('#examImportMsg','تعذر جلب مواد الدور الثاني: '+error.message,'error');return;}
+    const students=(data||[]).map(r=>{
+      const raw=r.failed_subjects??r.subjects_failed??r.failing_subjects??r.second_round_subjects??r.materials_second_round??r['مواد الدور الثاني']??'';
+      const subjects=Array.isArray(raw)?raw.join('، '):String(raw||'').trim();
+      const status=String(r.result_status||'').trim();
+      return {r,subjects,status};
+    }).filter(x=>x.subjects && !/^(لا يوجد|لا توجد|ناجح|ناجحة|—|-|0)$/i.test(x.subjects) && (/دور\s*ثاني|دور ثان|ثان/i.test(x.status)||x.subjects.length>0));
+    const rows=[headers,...students.map(({r,subjects},i)=>[i+1,r.full_name||'',r.national_id||'',r.seat_number||'',r.grade||'',r.specialization||'',r.result_status||'دور ثاني',r.total??'',r.max_total??'',subjects,r.controller_name||'',r.principal_name||''])];
     const ws=XLSX.utils.aoa_to_sheet(rows);
     ws['!views']=[{rightToLeft:true}];
     ws['!cols']=[{wch:9},{wch:30},{wch:20},{wch:15},{wch:14},{wch:28},{wch:24},{wch:16},{wch:16},{wch:32},{wch:24},{wch:24}];
-    ws['!autofilter']={ref:'A1:L101'};
+    ws['!autofilter']={ref:'A1:L'+Math.max(1,rows.length)};
     ws['!freeze']={xSplit:0,ySplit:1};
     const wb=XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb,ws,'ملخص النتائج');
     XLSX.writeFile(wb,'شيت_ملخص_النتائج_والتوقيعات.xlsx');
+    say('#examImportMsg',students.length?'تم تنزيل الملخص بمواد الدور الثاني للطالبات المستحقات فقط.':'لا توجد طالبات مسجلات لهن مواد دور ثانٍ في نتائج الدور الأول لهذا العام.','success');
   }
   async function exportExamResults(){
     if(typeof XLSX==='undefined'){window.alert('مكتبة Excel غير متاحة.');return;}
