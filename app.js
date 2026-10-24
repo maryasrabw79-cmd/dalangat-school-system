@@ -3,7 +3,7 @@
   const $ = (s) => document.querySelector(s);
   const $$ = (s) => document.querySelectorAll(s);
   const cfg = window.SCHOOL_DB_CONFIG || {};
-  const state = { client:null, user:null, profile:null, role:'viewer', section:'employees', pendingAction:null, cache:{employees:[],students:[]}, rows:[], staffRecord:null, libraryBooks:[] };
+  const state = { client:null, user:null, profile:null, role:'viewer', section:'employees', pendingAction:null, examMode:'year_end', studentResultMode:'year_end', cache:{employees:[],students:[]}, rows:[], staffRecord:null, libraryBooks:[] };
   const sections = {
     employees:{title:'العاملون',table:'staff',desc:'سجل بيانات العاملين بالمدرسة.',fields:[['full_name','اسم الموظف','text',true],['employee_no','الكود','text'],['national_id','الرقم القومي','text'],['birth_date','تاريخ الميلاد','date'],['qualification','المؤهل','text'],['hire_date','تاريخ التعيين','date'],['work_start_date','تاريخ استلام العمل','date'],['specialization','التخصص','text'],['job_title','المسمى الوظيفي','text'],['grade','الدرجة','text'],['grade_date','تاريخ الدرجة','date'],['phone','رقم التليفون','tel'],['marital_status','الحالة الاجتماعية','select',false,['أعزب','متزوج','مطلق','أرمل']],['address','العنوان','textarea']],columns:[['full_name','اسم الموظف'],['employee_no','الكود'],['national_id','الرقم القومي'],['birth_date','تاريخ الميلاد'],['qualification','المؤهل'],['hire_date','تاريخ التعيين'],['work_start_date','تاريخ استلام العمل'],['specialization','التخصص'],['job_title','المسمى الوظيفي'],['grade','الدرجة'],['grade_date','تاريخ الدرجة'],['phone','رقم التليفون'],['marital_status','الحالة الاجتماعية'],['address','العنوان']]},
     students:{title:'الطالبات',table:'students',desc:'سجل بيانات الطالبات وقيدهن.',fields:[['full_name','اسم الطالبة','text',true],['student_code','كود الطالبة','text',true],['grade','الصف الدراسي','select',true,['الأول','الثاني','الثالث']],['section','الفصل','text'],['specialization','التخصص','select',true,['فني تكنولوجيا الحاسبات','فني الأجهزة الإلكترونية','فني الملابس الجاهزة']],['enrollment_status','حالة القيد','select',true,['مقيدة','منقطعة','محولة','متخرجة']],['birth_date','تاريخ الميلاد','date'],['guardian_name','اسم ولي الأمر','text'],['guardian_phone','هاتف ولي الأمر','tel']],columns:[['full_name','اسم الطالبة'],['student_code','كود الطالبة'],['grade','الصف'],['section','الفصل'],['specialization','التخصص'],['enrollment_status','الحالة']]},
@@ -36,7 +36,9 @@
   function showLogin(){ hideStudentResultViews(); $('#homeView').classList.add('hidden'); $('#registerView').classList.add('hidden'); $('#loginView').classList.remove('hidden'); $('#appView').classList.add('hidden'); $('#logoutBtn').classList.add('hidden'); $('#homeBtn').classList.remove('hidden'); }
   function showRegister(){ hideStudentResultViews(); $('#homeView').classList.add('hidden'); $('#loginView').classList.add('hidden'); $('#registerView').classList.remove('hidden'); $('#appView').classList.add('hidden'); $('#logoutBtn').classList.add('hidden'); $('#homeBtn').classList.remove('hidden'); say('#registerMsg',''); }
   function hideStudentResultViews(){ $('#studentResultsLoginView').classList.add('hidden'); $('#studentCertificateView').classList.add('hidden'); }
-  function showStudentResultsLogin(){
+  function showStudentResultsLogin(mode='year_end'){
+    state.studentResultMode=mode==='half_year'?'half_year':'year_end';
+    $('#studentResultsLoginView h2').textContent=state.studentResultMode==='half_year'?'نتيجة نصف العام':'نتيجة آخر العام';
     $('#homeView').classList.add('hidden');$('#loginView').classList.add('hidden');$('#registerView').classList.add('hidden');$('#appView').classList.add('hidden');hideStudentResultViews();
     $('#studentResultsLoginView').classList.remove('hidden');$('#logoutBtn').classList.add('hidden');$('#homeBtn').classList.remove('hidden');
     $('#studentExamNationalId').value='';$('#studentExamAccessCode').value='';say('#studentExamLoginMsg','');
@@ -49,7 +51,7 @@
     if(!/^\d{14}$/.test(nationalId)||!/^\d{6,8}$/.test(accessCode)){say('#studentExamLoginMsg','أدخلي رقمًا قوميًا من 14 رقمًا ورمز دخول من 6 أو 8 أرقام.','error');return;}
     btn.disabled=true;btn.textContent='جارٍ التحقق...';say('#studentExamLoginMsg','جارٍ التحقق من بيانات الدخول...');
     try{
-      const response=await callAccessFunction({action:'student_exam_login',national_id:nationalId,access_code:accessCode});
+      const response=await callAccessFunction({action:'student_exam_login',result_type:state.studentResultMode,national_id:nationalId,access_code:accessCode});
       if(!response?.certificate)throw new Error('تعذر تحميل الشهادة.');
       renderStudentCertificate(response.certificate,response.uses_remaining);
       $('#studentResultsLoginView').classList.add('hidden');$('#studentCertificateView').classList.remove('hidden');$('#studentCertificateView').style.display='block';$('#studentCertificateHost').style.display='block';$('#homeView').classList.add('hidden');$('#appView').classList.add('hidden');$('#homeBtn').classList.remove('hidden');
@@ -86,7 +88,7 @@
     }else{
       const totalText=r.total!==null&&r.total!==undefined&&String(r.total).trim()!==''?String(r.total):'—';
       const maxTotalText=r.max_total!==null&&r.max_total!==undefined&&String(r.max_total).trim()!==''?String(r.max_total):'—';
-      $('#studentCertificateHost').innerHTML='<article class="student-certificate congrats-certificate" dir="rtl"><div class="certificate-ornament"><div class="congrats-top"><span class="congrats-star">✦</span><span>محافظة البحيرة</span><span class="congrats-star">✦</span></div><header class="certificate-header"><div class="certificate-ministry">مديرية التربية والتعليم بالبحيرة</div><div class="certificate-administration">إدارة الدلنجات التعليمية</div><h1>مدرسة الدلنجات الصناعية بنات</h1><div class="congrats-ribbon">شهادة تهنئة بالنجاح</div></header><p class="congrats-message">تتقدم إدارة المدرسة بخالص التهنئة للطالبة</p><div class="congrats-student-name">'+esc(r.full_name||'الطالبة')+'</div><div class="congrats-details"><span><strong>العام الدراسي:</strong> '+esc(r.academic_year||'—')+'</span><span><strong>الصف:</strong> '+esc(gradeText||'—')+'</span><span><strong>رقم الجلوس:</strong> '+esc(seatNo)+'</span><span><strong>الدور:</strong> الأول</span></div><div class="congrats-total-panel"><span>المجموع النهائي</span><strong>'+esc(totalText)+'</strong><small>من '+esc(maxTotalText)+' درجة</small></div><section class="certificate-result"><strong>النتيجة النهائية: '+esc(status==='غير محددة'?'ناجحة':status)+'</strong></section>'+footerHtml+'</div></article><p class="no-print certificate-usage-note">مرات الدخول المتبقية لهذا الرمز: '+esc(remaining)+' (من أصل 5).</p>';
+      $('#studentCertificateHost').innerHTML='<article class="student-certificate congrats-certificate" dir="rtl"><div class="certificate-ornament"><div class="congrats-top"><span class="congrats-star">✦</span><span>محافظة البحيرة</span><span class="congrats-star">✦</span></div><header class="certificate-header"><div class="certificate-ministry">مديرية التربية والتعليم بالبحيرة</div><div class="certificate-administration">إدارة الدلنجات التعليمية</div><h1>مدرسة الدلنجات الصناعية بنات</h1><div class="congrats-ribbon">شهادة تهنئة بالنجاح</div></header><p class="congrats-message">تتقدم إدارة المدرسة بخالص التهنئة للطالبة</p><div class="congrats-student-name">'+esc(r.full_name||'الطالبة')+'</div><div class="congrats-details"><span><strong>العام الدراسي:</strong> '+esc(r.academic_year||'—')+'</span><span><strong>الصف:</strong> '+esc(gradeText||'—')+'</span><span><strong>رقم الجلوس:</strong> '+esc(seatNo)+'</span><span><strong>الدور / الفصل:</strong> '+esc(r.exam_round||'الدور الأول')+'</span></div><div class="congrats-total-panel"><span>المجموع النهائي</span><strong>'+esc(totalText)+'</strong><small>من '+esc(maxTotalText)+' درجة</small></div><section class="certificate-result"><strong>النتيجة النهائية: '+esc(status==='غير محددة'?'ناجحة':status)+'</strong></section>'+footerHtml+'</div></article><p class="no-print certificate-usage-note">مرات الدخول المتبقية لهذا الرمز: '+esc(remaining)+' (من أصل 5).</p>';
     }
   }
   async function openStudentResultHome(){showHome();}
@@ -97,8 +99,8 @@
       if(!state.user||!state.profile){state.pendingAction='library';showLogin();return;}
       await openLibrary();return;
     }
-    if(key==='half_year_results'){window.alert('نتيجة نصف العام: سيتم تجهيز رفع الشيت وتسجيل دخول الطالبات لهذه النتيجة في الخطوة التالية.');return;}
-    if(key==='exam_results'){if(admin()){await openExamResults();}else{showStudentResultsLogin();}return;}
+    if(key==='half_year_results'){if(admin()){await openExamResults('half_year');}else{showStudentResultsLogin('half_year');}return;}
+    if(key==='exam_results'){if(admin()){await openExamResults('year_end');}else{showStudentResultsLogin('year_end');}return;}
     if(key==='export'&&state.user&&!admin()){say('#sectionMsg','استخراج ملفات Excel متاح لمدير النظام فقط.','error');return;}
     if(key==='home'){showHome();return;}
     if(key==='logout'){if(state.user){await logout();}else{showHome();}return;}
@@ -254,13 +256,15 @@
     $('#loginView').classList.add('hidden');$('#appView').classList.remove('hidden');$('#logoutBtn').classList.remove('hidden');$('#welcomeTitle').textContent='أهلًا بك في منظومة المدرسة';$('#roleLabel').textContent='صلاحيتك: '+humanRole(state.role);
     renderTabs(); updateHomeTiles(); await loadStats(); const requested=state.pendingAction; state.pendingAction=null; if(requested==='export'){showExportOptions();return;} if(requested==='exam_results'){await openExamResults();return;} if(requested==='library'){await openLibrary();return;} if(requested&&requested!=='users'&&sections[requested]&&allowedSections().includes(requested))state.section=requested; else if(requested==='users'&&admin())state.section='users'; if(!allowedSections().includes(state.section))state.section=allowedSections()[0]||'employees'; renderTabs(); $('#exportView').classList.add('hidden'); $('#dataView').classList.remove('hidden'); await loadSection(state.section);
   }
-  async function openExamResults(){
+  async function openExamResults(mode='year_end'){
+    state.examMode=mode==='half_year'?'half_year':'year_end';
     if(!admin()){showHome();window.alert('قسم نتائج الامتحانات متاح لمدير النظام فقط.');return;}
     $('#homeView').classList.add('hidden');$('#loginView').classList.add('hidden');$('#appView').classList.remove('hidden');$('#logoutBtn').classList.remove('hidden');
     $('#exportView').classList.add('hidden');$('#dataView').classList.remove('hidden');$('#dataView').classList.add('exam-admin-view');$('#tabs').classList.add('hidden');$('#refreshBtn').classList.add('hidden');
-    $('#sectionTitle').textContent='نتيجة آخر العام';$('#sectionDesc').textContent='نزّل نموذج Excel الذي يحتوي على شيتين للصف الأول والصف الثاني، أدخل الدرجات ثم ارفع الملف نفسه. بعد الحفظ سيصدر ملف رموز الدخول.';
+    $('#sectionTitle').textContent=state.examMode==='half_year'?'نتيجة نصف العام':'نتيجة آخر العام';$('#sectionDesc').textContent='نزّل نموذج Excel الذي يحتوي على شيتين للصف الأول والصف الثاني، أدخل الدرجات ثم ارفع الملف نفسه. بعد الحفظ سيصدر ملف رموز الدخول.';
     $('#formHost').innerHTML='<div class="exam-import-panel"><div class="form-grid"><label>العام الدراسي<input id="examAcademicYear" type="text" value="2026/2027" required></label><label>الدور / الفصل الامتحاني<select id="examRound"><option>الدور الأول</option><option>الدور الثاني</option><option>الفصل الدراسي الأول</option><option>الفصل الدراسي الثاني</option><option>امتحان آخر</option></select></label><label>ملف Excel (.xlsx أو .xls)<input id="examExcelFile" type="file" accept=".xlsx,.xls,.csv" required></label></div><p>بعد الحفظ سيُنزَّل ملف Excel منفصل يحتوي على مسلسل واسم الطالبة والرقم القومي ورمز دخول عشوائي صالح لخمس مرات.</p><div class="form-actions"><button id="examImportBtn" type="button">رفع الشيت وإصدار رموز الدخول</button><button id="examIssueCodesBtn" type="button" class="secondary">إصدار رموز للنتائج المحفوظة</button><button id="examClearPreviousBtn" type="button" class="secondary">مسح الشيتات السابقة</button><button id="examSummaryTemplateBtn" type="button" class="secondary">تنزيل شيت ملخص النتائج والتوقيعات</button></div><div id="examImportMsg" class="message" aria-live="polite"></div></div>';
     $('#tableHead').innerHTML='';$('#tableBody').innerHTML='';$('#sectionMsg').textContent='';
+    if(state.examMode==='half_year'){$('#examRound').innerHTML='<option>الفصل الدراسي الأول</option>';$('#examRound').value='الفصل الدراسي الأول';}
     $('#examImportBtn').addEventListener('click',importExamWorkbook);$('#examIssueCodesBtn').addEventListener('click',issueExamCodesFromSavedResults);$('#examSummaryTemplateBtn').addEventListener('click',downloadExamSummaryTemplate);$('#examClearPreviousBtn').addEventListener('click',clearPreviousExamSheets);
   }
   async function clearPreviousExamSheets(){const btn=$('#examClearPreviousBtn'),msg=$('#examImportMsg');if(!admin()){msg.className='message error';msg.textContent='مسح النتائج متاح لمدير النظام فقط.';return;}const year=$('#examAcademicYear').value.trim(),round=$('#examRound').value;if(!year){msg.className='message error';msg.textContent='اكتب العام الدراسي أولًا.';return;}if(!window.confirm('سيتم حذف نتائج ورموز دخول العام '+year+'، '+round+' فقط، ولا يمكن التراجع. هل تريد المتابعة؟'))return;btn.disabled=true;const old=btn.textContent;btn.textContent='جارٍ المسح...';msg.className='message';msg.textContent='جارٍ مسح النتائج السابقة...';try{const {data,error}=await state.client.rpc('admin_clear_exam_results_by_round',{p_academic_year:year,p_exam_round:round});if(error)throw error;msg.className='message success';msg.textContent='تم المسح بنجاح. عدد سجلات النتائج المحذوفة: '+Number(data?.deleted_results||0)+'. يمكنك الآن رفع الشيت الجديد.';}catch(err){msg.className='message error';msg.textContent='تعذر مسح الشيتات السابقة: '+(err?.message||String(err));}finally{btn.disabled=false;btn.textContent=old;}}
@@ -272,7 +276,7 @@
     btn.disabled=true;const old=btn.textContent;btn.textContent='جارٍ إصدار الرموز...';msg.className='message';msg.textContent='جارٍ إصدار ملف رموز الدخول للنتائج المحفوظة...';
     try{
       const {data:{session}}=await state.client.auth.getSession();
-      const issued=await callAccessFunction({action:'issue_exam_codes',academic_year:year,exam_round:round},session?.access_token||null);
+      const issued=await callAccessFunction({action:'issue_exam_codes',result_type:state.examMode,academic_year:year,exam_round:round},session?.access_token||null);
       if(!Array.isArray(issued.codes)||!issued.codes.length)throw new Error('لم يتم إرجاع رموز دخول.');
       const rows=issued.codes.map((r,i)=>({'مسلسل':i+1,'اسم الطالبة':r.full_name,'الرقم القومي':String(r.national_id),'رمز الدخول':String(r.access_code)}));
       const ws=XLSX.utils.json_to_sheet(rows);ws['!views']=[{rightToLeft:true}];ws['!cols']=[{wch:10},{wch:32},{wch:20},{wch:16}];
