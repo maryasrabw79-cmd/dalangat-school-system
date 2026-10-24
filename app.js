@@ -389,11 +389,26 @@
         const {data:{session}}=await state.client.auth.getSession();
         const issued=await callAccessFunction({action:'issue_exam_codes',result_type:state.examMode,academic_year:year,exam_round:round},session?.access_token||null);
         if(!Array.isArray(issued.codes)||!issued.codes.length)throw new Error('لم يتم إرجاع رموز دخول.');
+        const resultHeaders=['الرقم القومي','اسم الطالبة','رقم الجلوس','الصف','الفصل','التخصص',...subjectHeaders.map(x=>x.h),'المجموع الكلي','النهاية العظمى','النسبة المئوية','النتيجة','مواد الرسوب','مواد الدور الثاني','رئيس الكنترول','مدير المدرسة'];
+        const maxMarksExport=['','','','','','',...subjectHeaders.map(x=>maxMarksRow?.[x.h]??''),'','','','','','','',''];
+        const resultRows=rows.map(r=>[
+          String(r.national_id||''),r.full_name||'',r.seat_number||'',r.grade||'',r.section||'',r.specialization||'',
+          ...subjectHeaders.map(x=>r.subjects?.[x.h]??''),
+          r.total??'',r.max_total??'',r.percentage??'',r.result_status||'',
+          r.failed_subjects||'',r.failed_subjects||'',r.controller_name||'',r.principal_name||''
+        ]);
+        const resultWs=XLSX.utils.aoa_to_sheet([resultHeaders,maxMarksExport,...resultRows]);
+        resultWs['!views']=[{rightToLeft:true}];
+        resultWs['!cols']=resultHeaders.map((h,i)=>({wch:i===0?20:i===1?30:i===2?14:i>=6&&i<6+subjectHeaders.length?16:18}));
+        resultWs['!autofilter']={ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:Math.max(1,resultRows.length+1),c:resultHeaders.length-1}})};
+        resultWs['!freeze']={xSplit:2,ySplit:2};
         const codeRows=issued.codes.map((r,i)=>({'مسلسل':i+1,'اسم الطالبة':r.full_name,'الرقم القومي':String(r.national_id),'رمز الدخول':String(r.access_code)}));
-        const ws=XLSX.utils.json_to_sheet(codeRows);ws['!views']=[{rightToLeft:true}];ws['!cols']=[{wch:10},{wch:32},{wch:20},{wch:16}];
-        const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'رموز دخول الطالبات');
-        XLSX.writeFile(wb,'رموز_دخول_الطالبات_'+year.replace('/','-')+'.xlsx');
-        codeFileNote=' تم إصدار وتنزيل ملف رموز الدخول لعدد '+issued.codes.length+' طالبة، وكل رمز صالح لخمس مرات.';
+        const codesWs=XLSX.utils.json_to_sheet(codeRows);codesWs['!views']=[{rightToLeft:true}];codesWs['!cols']=[{wch:10},{wch:32},{wch:20},{wch:16}];
+        const wb=XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb,resultWs,'بيانات ودرجات الطالبات');
+        XLSX.utils.book_append_sheet(wb,codesWs,'رموز دخول الطالبات');
+        XLSX.writeFile(wb,'بيانات_ودرجات_ورموز_الطالبات_'+year.replace('/','-')+'.xlsx');
+        codeFileNote=' تم تنزيل ملف Excel يحتوي على بيانات الطالبات ودرجات المواد في الشيت الأول، ورموز الدخول في الشيت الثاني. كل رمز صالح لخمس مرات.';
       }catch(codeErr){console.error('Issue student access codes error:',codeErr);codeFileNote=' تم حفظ النتائج، لكن تعذر إصدار ملف رموز الدخول: '+(codeErr?.message||String(codeErr))+'.';}
       msg.className='message '+(errors.length?'error':'success');msg.textContent='تم حفظ/تحديث '+saved+' نتيجة من ملف «'+file.name+'». '+(errors.length?'تم تجاوز '+errors.length+' صف غير صالح. أول الملاحظات: '+errors.slice(0,5).join(' | '):'لم توجد أخطاء في الصفوف.')+codeFileNote;
     }catch(err){msg.className='message error';msg.textContent='تعذر استيراد الشيت: '+(err?.message||String(err));}
