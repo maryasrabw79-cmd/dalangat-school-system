@@ -157,7 +157,7 @@
     $('#homeView').classList.add('hidden');$('#loginView').classList.add('hidden');$('#appView').classList.remove('hidden');$('#logoutBtn').classList.remove('hidden');
     $('#exportView').classList.add('hidden');$('#dataView').classList.remove('hidden');$('#dataView').classList.add('exam-admin-view');$('#tabs').classList.add('hidden');$('#refreshBtn').classList.add('hidden');
     $('#sectionTitle').textContent='نتائج الامتحانات';$('#sectionDesc').textContent='نزّل نموذج Excel الذي يحتوي على شيتين للصف الأول والصف الثاني، أدخل الدرجات ثم ارفع الملف نفسه. بعد الحفظ سيصدر ملف رموز الدخول.';
-    $('#formHost').innerHTML='<div class="exam-import-panel"><div class="form-grid"><label>العام الدراسي<input id="examAcademicYear" type="text" value="2026/2027" required></label><label>الدور / الفصل الامتحاني<select id="examRound"><option>الدور الأول</option><option>الدور الثاني</option><option>الفصل الدراسي الأول</option><option>الفصل الدراسي الثاني</option><option>امتحان آخر</option></select></label><label>ملف Excel (.xlsx أو .xls)<input id="examExcelFile" type="file" accept=".xlsx,.xls,.csv" required></label></div><p>بعد الحفظ سيُنزَّل ملف Excel منفصل يحتوي على مسلسل واسم الطالبة والرقم القومي ورمز دخول عشوائي صالح لخمس مرات.</p><div class="form-actions"><button id="examImportBtn" type="button">رفع الشيت وإصدار رموز الدخول</button><button id="examTemplateBtn" type="button" class="secondary">تنزيل نموذج الصف الأول والثاني</button><button id="examIssueCodesBtn" type="button" class="secondary">إصدار رموز للنتائج المحفوظة</button><button id="examSummaryTemplateBtn" type="button" class="secondary">تنزيل شيت ملخص النتائج والتوقيعات</button></div><div id="examImportMsg" class="message" aria-live="polite"></div></div>';
+    $('#formHost').innerHTML='<div class="exam-import-panel"><div class="form-grid"><label>العام الدراسي<input id="examAcademicYear" type="text" value="2026/2027" required></label><label>الدور / الفصل الامتحاني<select id="examRound"><option>الدور الأول</option><option>الدور الثاني</option><option>الفصل الدراسي الأول</option><option>الفصل الدراسي الثاني</option><option>امتحان آخر</option></select></label><label>ملف Excel (.xlsx أو .xls)<input id="examExcelFile" type="file" accept=".xlsx,.xls,.csv" required></label></div><p>بعد الحفظ سيُنزَّل ملف Excel منفصل يحتوي على مسلسل واسم الطالبة والرقم القومي ورمز دخول عشوائي صالح لخمس مرات.</p><div class="form-actions"><button id="examImportBtn" type="button">رفع الشيت وإصدار رموز الدخول</button><button id="examIssueCodesBtn" type="button" class="secondary">إصدار رموز للنتائج المحفوظة</button><button id="examSummaryTemplateBtn" type="button" class="secondary">تنزيل شيت ملخص النتائج والتوقيعات</button></div><div id="examImportMsg" class="message" aria-live="polite"></div></div>';
     $('#tableHead').innerHTML='';$('#tableBody').innerHTML='';$('#sectionMsg').textContent='';
     $('#examImportBtn').addEventListener('click',importExamWorkbook);$('#examTemplateBtn').addEventListener('click',downloadExamTemplate);$('#examIssueCodesBtn').addEventListener('click',issueExamCodesFromSavedResults);$('#examSummaryTemplateBtn').addEventListener('click',downloadExamSummaryTemplate);
   }
@@ -319,12 +319,12 @@
   }
   function downloadExamSummaryTemplate(){
     if(typeof XLSX==='undefined'){window.alert('مكتبة Excel غير متاحة.');return;}
-    const headers=['مسلسل','اسم الطالبة','رقم الجلوس','الصف','حالة الطالبة','مجموع الطالبة','المجموع الكلي','رئيس الكنترول','مدير المدرسة'];
+    const headers=['مسلسل','اسم الطالبة','الرقم القومي','رقم الجلوس','الصف','حالة الطالبة','مجموع الطالبة','المجموع الكلي','رئيس الكنترول','مدير المدرسة'];
     const rows=[headers,...Array.from({length:100},()=>Array(headers.length).fill(''))];
     const ws=XLSX.utils.aoa_to_sheet(rows);
     ws['!views']=[{rightToLeft:true}];
-    ws['!cols']=[{wch:9},{wch:30},{wch:15},{wch:14},{wch:24},{wch:16},{wch:16},{wch:24},{wch:24}];
-    ws['!autofilter']={ref:'A1:I101'};
+    ws['!cols']=[{wch:9},{wch:30},{wch:20},{wch:15},{wch:14},{wch:24},{wch:16},{wch:16},{wch:24},{wch:24}];
+    ws['!autofilter']={ref:'A1:J101'};
     ws['!freeze']={xSplit:0,ySplit:1};
     const wb=XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb,ws,'ملخص النتائج');
