@@ -57,7 +57,6 @@
     const orderIndex=name=>{const n=examHeader(name);const i=subjectOrder.findIndex(s=>examHeader(s)===n);return i<0?999:i;};
     const subjects=rawSubjects;
     const escText=v=>esc(v===null||v===undefined||String(v).trim()===''?'—':v);
-    remove default grades
     const failedRaw=r.failed_subjects??r.subjects_failed??r.failing_subjects??'';
     const failedList=Array.isArray(failedRaw)?failedRaw.join('، '):String(failedRaw||'').trim();
     const subjectRows=subjects.length?subjects.map(([name,mark])=>'<tr><td>'+esc(name)+'</td><td>'+escText(maxFor(name))+'</td><td>'+escText(mark)+'</td></tr>').join(''):'<tr><td colspan="3">لا توجد مواد مسجلة</td></tr>';
