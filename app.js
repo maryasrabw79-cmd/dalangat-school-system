@@ -97,6 +97,7 @@
       if(!state.user||!state.profile){state.pendingAction='library';showLogin();return;}
       await openLibrary();return;
     }
+    if(key==='half_year_results'){window.alert('نتيجة نصف العام: سيتم تجهيز رفع الشيت وتسجيل دخول الطالبات لهذه النتيجة في الخطوة التالية.');return;}
     if(key==='exam_results'){if(admin()){await openExamResults();}else{showStudentResultsLogin();}return;}
     if(key==='export'&&state.user&&!admin()){say('#sectionMsg','استخراج ملفات Excel متاح لمدير النظام فقط.','error');return;}
     if(key==='home'){showHome();return;}
