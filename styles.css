@@ -434,3 +434,15 @@ body{background:#eaf7f4}
 #studentCertificateHost .congrats-certificate .congrats-total-panel:before,#studentCertificateHost .congrats-certificate .congrats-total-panel:after{content:"✦ ❧ ✦";position:absolute;top:2mm;color:#bd9130;font-size:14px}
 #studentCertificateHost .congrats-certificate .congrats-total-panel:before{left:4mm}
 #studentCertificateHost .congrats-certificate .congrats-total-panel:after{right:4mm}
+
+/* Visible floral corner decorations and botanical ornaments */
+#studentCertificateHost .congrats-certificate .certificate-ornament{background-image:radial-gradient(circle at 10% 8%,#fff4d5 0,transparent 17%),radial-gradient(circle at 90% 8%,#fff4d5 0,transparent 17%),linear-gradient(145deg,#fffef8 0%,#fff 48%,#f5faff 100%)!important}
+#studentCertificateHost .congrats-certificate .certificate-ornament:before,#studentCertificateHost .congrats-certificate .certificate-ornament:after{content:"✿ ❀ ✿"!important;top:4mm!important;font-family:serif;font-size:30px!important;line-height:1.2;color:#bd9130!important;letter-spacing:4px;text-shadow:1px 1px 0 #f5e2a7,0 0 3px #fff;z-index:5}
+#studentCertificateHost .congrats-certificate .certificate-ornament:before{left:7mm!important}
+#studentCertificateHost .congrats-certificate .certificate-ornament:after{right:7mm!important;transform:none!important}
+#studentCertificateHost .congrats-certificate .congrats-top{margin-top:10mm!important}
+#studentCertificateHost .congrats-certificate .certificate-meta>div{border:1px solid #c7a653!important;box-shadow:inset 0 0 0 1px #fff4d4}
+#studentCertificateHost .congrats-certificate .certificate-meta>div:has(strong){background:#fffaf0}
+@media print{
+ #studentCertificateHost .congrats-certificate .certificate-ornament:before,#studentCertificateHost .congrats-certificate .certificate-ornament:after{font-size:25px!important;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+}
