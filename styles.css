@@ -446,3 +446,10 @@ body{background:#eaf7f4}
 @media print{
  #studentCertificateHost .congrats-certificate .certificate-ornament:before,#studentCertificateHost .congrats-certificate .certificate-ornament:after{font-size:25px!important;print-color-adjust:exact;-webkit-print-color-adjust:exact}
 }
+
+
+/* Make the specialization unmistakable on the congratulations certificate */
+#studentCertificateHost .congrats-certificate .congrats-specialization{display:flex;align-items:center;justify-content:center;gap:4mm;width:fit-content;max-width:92%;box-sizing:border-box;margin:0 auto 6mm;padding:3mm 9mm;border:2px solid #bd9130;background:linear-gradient(90deg,#fff8e5,#fffdf6,#fff8e5);color:#174b82;text-align:center;font-size:16px;border-radius:8px;overflow-wrap:anywhere}
+#studentCertificateHost .congrats-certificate .congrats-specialization span{font-weight:700;color:#9a701d}
+#studentCertificateHost .congrats-certificate .congrats-specialization strong{font-size:18px;font-weight:900}
+@media print{#studentCertificateHost .congrats-certificate .congrats-specialization{font-size:11pt;padding:2mm 6mm;margin-bottom:4mm}#studentCertificateHost .congrats-certificate .congrats-specialization strong{font-size:12pt}}
