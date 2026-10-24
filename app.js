@@ -3,7 +3,7 @@
   const $ = (s) => document.querySelector(s);
   const $$ = (s) => document.querySelectorAll(s);
   const cfg = window.SCHOOL_DB_CONFIG || {};
-  const state = { client:null, user:null, profile:null, role:'viewer', section:'employees', pendingAction:null, cache:{employees:[],students:[]}, rows:[], staffRecord:null };
+  const state = { client:null, user:null, profile:null, role:'viewer', section:'employees', pendingAction:null, cache:{employees:[],students:[]}, rows:[], staffRecord:null, libraryBooks:[] };
   const sections = {
     employees:{title:'العاملون',table:'staff',desc:'سجل بيانات العاملين بالمدرسة.',fields:[['full_name','اسم الموظف','text',true],['employee_no','الكود','text'],['national_id','الرقم القومي','text'],['birth_date','تاريخ الميلاد','date'],['qualification','المؤهل','text'],['hire_date','تاريخ التعيين','date'],['work_start_date','تاريخ استلام العمل','date'],['specialization','التخصص','text'],['job_title','المسمى الوظيفي','text'],['grade','الدرجة','text'],['grade_date','تاريخ الدرجة','date'],['phone','رقم التليفون','tel'],['marital_status','الحالة الاجتماعية','select',false,['أعزب','متزوج','مطلق','أرمل']],['address','العنوان','textarea']],columns:[['full_name','اسم الموظف'],['employee_no','الكود'],['national_id','الرقم القومي'],['birth_date','تاريخ الميلاد'],['qualification','المؤهل'],['hire_date','تاريخ التعيين'],['work_start_date','تاريخ استلام العمل'],['specialization','التخصص'],['job_title','المسمى الوظيفي'],['grade','الدرجة'],['grade_date','تاريخ الدرجة'],['phone','رقم التليفون'],['marital_status','الحالة الاجتماعية'],['address','العنوان']]},
     students:{title:'الطالبات',table:'students',desc:'سجل بيانات الطالبات وقيدهن.',fields:[['full_name','اسم الطالبة','text',true],['student_code','كود الطالبة','text',true],['grade','الصف الدراسي','select',true,['الأول','الثاني','الثالث']],['section','الفصل','text'],['specialization','التخصص','select',true,['فني تكنولوجيا الحاسبات','فني الأجهزة الإلكترونية','فني الملابس الجاهزة']],['enrollment_status','حالة القيد','select',true,['مقيدة','منقطعة','محولة','متخرجة']],['birth_date','تاريخ الميلاد','date'],['guardian_name','اسم ولي الأمر','text'],['guardian_phone','هاتف ولي الأمر','tel']],columns:[['full_name','اسم الطالبة'],['student_code','كود الطالبة'],['grade','الصف'],['section','الفصل'],['specialization','التخصص'],['enrollment_status','الحالة']]},
@@ -22,11 +22,17 @@
     }
     state.client=window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey);
     $('#loginForm').addEventListener('submit',login); $('#studentResultsLoginForm').addEventListener('submit',submitStudentExamLogin); $('#studentExamBackBtn').addEventListener('click',showHome); $('#studentCertificateBackBtn').addEventListener('click',showHome); $('#studentCertificatePrintBtn').addEventListener('click',()=>window.print()); $('#registerForm').addEventListener('submit',activateAccount); $('#showRegisterBtn').addEventListener('click',showRegister); $('#backToLoginBtn').addEventListener('click',showLogin); $('#logoutBtn').addEventListener('click',logout); $('#refreshBtn').addEventListener('click',()=>loadSection(state.section)); $('#homeBtn').addEventListener('click',showHome); $('#exportSelectedBtn').addEventListener('click',()=>exportReportsToExcel($('#exportSectionSelect').value));
+    $('#libraryUploadForm').addEventListener('submit',uploadLibraryBook);
+    $('#libraryRefreshBtn').addEventListener('click',loadLibraryBooks);
+    $('#librarySearch').addEventListener('input',renderLibraryBooks);
+    $('#libraryGradeFilter').addEventListener('change',renderLibraryBooks);
+    $('#libraryCloseReaderBtn').addEventListener('click',closeLibraryReader);
+    $('#libraryBooksList').addEventListener('click',handleLibraryBookAction);
     $('#homeTabs').querySelectorAll('[data-home-section]').forEach(b=>{b.addEventListener('click',async(e)=>{e.preventDefault();const key=b.dataset.homeSection;try{await openHomeSelection(key);}catch(err){console.error('Home tile error ('+key+'):',err);window.alert('تعذر فتح القسم. حدّث الصفحة، وإذا استمرت المشكلة أرسل لي نص الخطأ: '+(err?.message||String(err)));}});});
     state.client.auth.onAuthStateChange((_event,session)=>{ if(session?.user){ state.user=session.user; setTimeout(loadProfile,0); } else { state.user=null; state.profile=null; showLogin(); }});
     const {data:{session}}=await state.client.auth.getSession(); if(session?.user){state.user=session.user;await loadProfile();} else showHome();
   }
-  function showHome(){ $('#supportView').classList.add('hidden'); hideStudentResultViews(); $('#homeView').classList.remove('hidden'); $('#loginView').classList.add('hidden'); $('#registerView').classList.add('hidden'); $('#appView').classList.add('hidden'); $('#logoutBtn').classList.toggle('hidden',!state.user); $('#homeBtn').classList.remove('hidden'); }
+  function showHome(){ $('#supportView').classList.add('hidden'); if($('#libraryView'))$('#libraryView').classList.add('hidden'); closeLibraryReader(); hideStudentResultViews(); $('#homeView').classList.remove('hidden'); $('#loginView').classList.add('hidden'); $('#registerView').classList.add('hidden'); $('#appView').classList.add('hidden'); $('#logoutBtn').classList.toggle('hidden',!state.user); $('#homeBtn').classList.remove('hidden'); }
   function showLogin(){ hideStudentResultViews(); $('#homeView').classList.add('hidden'); $('#registerView').classList.add('hidden'); $('#loginView').classList.remove('hidden'); $('#appView').classList.add('hidden'); $('#logoutBtn').classList.add('hidden'); $('#homeBtn').classList.remove('hidden'); }
   function showRegister(){ hideStudentResultViews(); $('#homeView').classList.add('hidden'); $('#loginView').classList.add('hidden'); $('#registerView').classList.remove('hidden'); $('#appView').classList.add('hidden'); $('#logoutBtn').classList.add('hidden'); $('#homeBtn').classList.remove('hidden'); say('#registerMsg',''); }
   function hideStudentResultViews(){ $('#studentResultsLoginView').classList.add('hidden'); $('#studentCertificateView').classList.add('hidden'); }
@@ -87,6 +93,10 @@
   function showSupport(){ hideStudentResultViews(); $('#homeView').classList.add('hidden'); $('#loginView').classList.add('hidden'); $('#registerView').classList.add('hidden'); $('#appView').classList.add('hidden'); $('#supportView').classList.remove('hidden'); $('#logoutBtn').classList.toggle('hidden',!state.user); $('#homeBtn').classList.remove('hidden'); }
   async function openHomeSelection(key){
     if(key==='support'){showSupport();return;}
+    if(key==='library'){
+      if(!state.user||!state.profile){state.pendingAction='library';showLogin();return;}
+      await openLibrary();return;
+    }
     if(key==='exam_results'){if(admin()){await openExamResults();}else{showStudentResultsLogin();}return;}
     if(key==='export'&&state.user&&!admin()){say('#sectionMsg','استخراج ملفات Excel متاح لمدير النظام فقط.','error');return;}
     if(key==='home'){showHome();return;}
@@ -103,6 +113,77 @@
     if(!allowedSections().includes(action)){say('#sectionMsg','هذا القسم غير متاح لصلاحية حسابك.','error');return;}
     state.section=action;$('#homeView').classList.add('hidden');$('#loginView').classList.add('hidden');$('#appView').classList.remove('hidden');$('#logoutBtn').classList.remove('hidden');$('#exportView').classList.add('hidden');$('#dataView').classList.remove('hidden');renderTabs();await loadSection(action);
   }
+
+  async function openLibrary(){
+    if(!state.user||!state.profile){state.pendingAction='library';showLogin();return;}
+    $('#homeView').classList.add('hidden');$('#loginView').classList.add('hidden');$('#registerView').classList.add('hidden');$('#appView').classList.remove('hidden');
+    $('#exportView').classList.add('hidden');$('#dataView').classList.add('hidden');$('#tabs').classList.add('hidden');$('#libraryView').classList.remove('hidden');
+    $('#logoutBtn').classList.remove('hidden');$('#homeBtn').classList.remove('hidden');
+    $('#libraryAdminPanel').classList.toggle('hidden',!admin());
+    say('#libraryMsg','');say('#libraryAdminMsg','');
+    await loadLibraryBooks();
+  }
+  async function loadLibraryBooks(){
+    if(!state.user||!state.client){say('#libraryMsg','يجب تسجيل الدخول لعرض المكتبة.','error');return;}
+    $('#libraryBooksList').innerHTML='<p class="library-empty">جارٍ تحميل الكتب...</p>';
+    const {data,error}=await state.client.from('library_books').select('id,title,subject,grade,description,storage_path,file_name,created_at').order('created_at',{ascending:false});
+    if(error){$('#libraryBooksList').innerHTML='';say('#libraryMsg','تعذر تحميل الكتب: '+error.message,'error');return;}
+    state.libraryBooks=data||[];renderLibraryBooks();
+  }
+  function renderLibraryBooks(){
+    const host=$('#libraryBooksList');if(!host)return;
+    const books=state.libraryBooks||[];
+    const q=String($('#librarySearch')?.value||'').trim().toLocaleLowerCase('ar');
+    const grade=$('#libraryGradeFilter')?.value||'';
+    const filtered=books.filter(b=>(!grade||b.grade===grade)&&(!q||[b.title,b.subject,b.grade,b.description].some(v=>String(v||'').toLocaleLowerCase('ar').includes(q))));
+    if(!filtered.length){host.innerHTML='<p class="library-empty">لا توجد كتب مطابقة حاليًا.</p>';return;}
+    host.innerHTML=filtered.map(b=>'<article class="library-book-card"><div class="library-book-icon" aria-hidden="true">📘</div><div class="library-book-info"><h3>'+esc(b.title)+'</h3><p>'+esc(b.subject||'مادة غير محددة')+' · '+esc(b.grade?'الصف '+b.grade:'كل الصفوف')+'</p>'+(b.description?'<p class="library-book-description">'+esc(b.description)+'</p>':'')+'</div><div class="library-book-actions"><button type="button" data-library-action="read" data-book-id="'+esc(b.id)+'">قراءة الكتاب</button>'+(admin()?'<button type="button" class="secondary" data-library-action="delete" data-book-id="'+esc(b.id)+'">حذف</button>':'')+'</div></article>').join('');
+  }
+  async function uploadLibraryBook(e){
+    e.preventDefault();
+    if(!admin()){say('#libraryAdminMsg','رفع الكتب متاح للإدارة المخوّلة فقط.','error');return;}
+    const file=$('#libraryFile').files?.[0];const title=$('#libraryTitle').value.trim();
+    if(!file||!title){say('#libraryAdminMsg','اكتب اسم الكتاب واختر ملف PDF.','error');return;}
+    if(file.type!=='application/pdf'&&!file.name.toLowerCase().endsWith('.pdf')){say('#libraryAdminMsg','يرجى اختيار ملف بصيغة PDF فقط.','error');return;}
+    if(file.size>50*1024*1024){say('#libraryAdminMsg','حجم الكتاب أكبر من الحد المسموح (50 ميجابايت).','error');return;}
+    const btn=$('#libraryUploadBtn');btn.disabled=true;btn.textContent='جارٍ رفع الكتاب...';say('#libraryAdminMsg','يتم رفع الملف وحفظ بيانات الكتاب...');
+    const safeName=file.name.replace(/[^a-zA-Z0-9._-]/g,'_').slice(-120)||'book.pdf';
+    const path=crypto.randomUUID()+'-'+safeName;
+    try{
+      const {error:uploadError}=await state.client.storage.from('school-library').upload(path,file,{contentType:'application/pdf',upsert:false});
+      if(uploadError)throw uploadError;
+      const {error:insertError}=await state.client.from('library_books').insert({title,subject:$('#librarySubject').value.trim()||null,grade:$('#libraryGrade').value||null,description:$('#libraryDescription').value.trim()||null,storage_path:path,file_name:file.name,uploaded_by:state.user.id});
+      if(insertError){await state.client.storage.from('school-library').remove([path]);throw insertError;}
+      $('#libraryUploadForm').reset();say('#libraryAdminMsg','تم رفع الكتاب وإضافته إلى المكتبة.','success');await loadLibraryBooks();
+    }catch(err){say('#libraryAdminMsg','تعذر رفع الكتاب: '+(err?.message||String(err)),'error');}
+    finally{btn.disabled=false;btn.textContent='رفع الكتاب';}
+  }
+  async function handleLibraryBookAction(e){
+    const btn=e.target.closest('button[data-library-action]');if(!btn)return;
+    const book=(state.libraryBooks||[]).find(b=>b.id===btn.dataset.bookId);if(!book)return;
+    if(btn.dataset.libraryAction==='read'){
+      try{
+        btn.disabled=true;btn.textContent='جارٍ فتح الكتاب...';
+        const {data,error}=await state.client.storage.from('school-library').createSignedUrl(book.storage_path,120);
+        if(error)throw error;
+        $('#libraryReaderTitle').textContent=book.title;
+        $('#libraryPdfFrame').src=data.signedUrl+'#toolbar=0&navpanes=0&scrollbar=1';
+        $('#libraryReader').classList.remove('hidden');$('#libraryReader').scrollIntoView({behavior:'smooth',block:'start'});
+      }catch(err){say('#libraryMsg','تعذر فتح الكتاب: '+(err?.message||String(err)),'error');}
+      finally{btn.disabled=false;btn.textContent='قراءة الكتاب';}
+    }else if(btn.dataset.libraryAction==='delete'){
+      if(!admin()){say('#libraryMsg','ليس لديك صلاحية حذف الكتب.','error');return;}
+      if(!window.confirm('هل تريد حذف الكتاب «'+book.title+'» نهائيًا من المكتبة؟'))return;
+      btn.disabled=true;
+      try{
+        const {error:removeError}=await state.client.storage.from('school-library').remove([book.storage_path]);if(removeError)throw removeError;
+        const {error:deleteError}=await state.client.from('library_books').delete().eq('id',book.id);if(deleteError)throw deleteError;
+        say('#libraryMsg','تم حذف الكتاب.','success');await loadLibraryBooks();
+      }catch(err){say('#libraryMsg','تعذر حذف الكتاب: '+(err?.message||String(err)),'error');}
+      finally{btn.disabled=false;}
+    }
+  }
+  function closeLibraryReader(){const frame=$('#libraryPdfFrame');if(frame)frame.src='about:blank';const reader=$('#libraryReader');if(reader)reader.classList.add('hidden');}
   function showExportOptions(){ if(!admin()){ $('#exportView').classList.add('hidden'); $('#dataView').classList.remove('hidden'); say('#sectionMsg','استخراج ملفات Excel متاح لمدير النظام فقط.','error'); return; } $('#exportView').classList.remove('hidden'); $('#dataView').classList.add('hidden'); const select=$('#exportSectionSelect'); const keys=admin()?[...Object.keys(sections),'national_ids','users']:allowedSections().filter(k=>k!=='users'); select.innerHTML=keys.map(k=>`<option value="${esc(k)}">${esc(k==='users'?'إدارة المستخدمين':k==='national_ids'?'إضافة الأرقام القومية المسموح لها بالتسجيل':sections[k]?.title||k)}</option>`).join(''); $('#exportMsg').textContent=''; }
   async function login(e){
     e.preventDefault();
@@ -170,7 +251,7 @@
       return;
     }
     $('#loginView').classList.add('hidden');$('#appView').classList.remove('hidden');$('#logoutBtn').classList.remove('hidden');$('#welcomeTitle').textContent='أهلًا بك في منظومة المدرسة';$('#roleLabel').textContent='صلاحيتك: '+humanRole(state.role);
-    renderTabs(); updateHomeTiles(); await loadStats(); const requested=state.pendingAction; state.pendingAction=null; if(requested==='export'){showExportOptions();return;} if(requested==='exam_results'){await openExamResults();return;} if(requested&&requested!=='users'&&sections[requested]&&allowedSections().includes(requested))state.section=requested; else if(requested==='users'&&admin())state.section='users'; if(!allowedSections().includes(state.section))state.section=allowedSections()[0]||'employees'; renderTabs(); $('#exportView').classList.add('hidden'); $('#dataView').classList.remove('hidden'); await loadSection(state.section);
+    renderTabs(); updateHomeTiles(); await loadStats(); const requested=state.pendingAction; state.pendingAction=null; if(requested==='export'){showExportOptions();return;} if(requested==='exam_results'){await openExamResults();return;} if(requested==='library'){await openLibrary();return;} if(requested&&requested!=='users'&&sections[requested]&&allowedSections().includes(requested))state.section=requested; else if(requested==='users'&&admin())state.section='users'; if(!allowedSections().includes(state.section))state.section=allowedSections()[0]||'employees'; renderTabs(); $('#exportView').classList.add('hidden'); $('#dataView').classList.remove('hidden'); await loadSection(state.section);
   }
   async function openExamResults(){
     if(!admin()){showHome();window.alert('قسم نتائج الامتحانات متاح لمدير النظام فقط.');return;}
