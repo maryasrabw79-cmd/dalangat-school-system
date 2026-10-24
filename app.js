@@ -387,7 +387,7 @@
       let codeFileNote='';
       try{
         const {data:{session}}=await state.client.auth.getSession();
-        const issued=await callAccessFunction({action:'issue_exam_codes',academic_year:year,exam_round:round},session?.access_token||null);
+        const issued=await callAccessFunction({action:'issue_exam_codes',result_type:state.examMode,academic_year:year,exam_round:round},session?.access_token||null);
         if(!Array.isArray(issued.codes)||!issued.codes.length)throw new Error('لم يتم إرجاع رموز دخول.');
         const codeRows=issued.codes.map((r,i)=>({'مسلسل':i+1,'اسم الطالبة':r.full_name,'الرقم القومي':String(r.national_id),'رمز الدخول':String(r.access_code)}));
         const ws=XLSX.utils.json_to_sheet(codeRows);ws['!views']=[{rightToLeft:true}];ws['!cols']=[{wch:10},{wch:32},{wch:20},{wch:16}];
