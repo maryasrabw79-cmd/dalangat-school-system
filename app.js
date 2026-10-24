@@ -57,7 +57,7 @@
     const orderIndex=name=>{const n=examHeader(name);const i=subjectOrder.findIndex(s=>examHeader(s)===n);return i<0?999:i;};
     const subjects=rawSubjects;
     const escText=v=>esc(v===null||v===undefined||String(v).trim()===''?'—':v);
-    const failedRaw=r.failed_subjects??r.subjects_failed??r.failing_subjects??'';
+    const failedRaw=r.failed_subjects??r.subjects_failed??r.failing_subjects??r.second_round_subjects??r.materials_second_round??r['مواد الدور الثاني']??'';
     const failedList=Array.isArray(failedRaw)?failedRaw.join('، '):String(failedRaw||'').trim();
     const subjectRows=subjects.length?subjects.map(([name,mark])=>'<tr><td>'+esc(name)+'</td><td>'+escText(r.subject_max_marks&&typeof r.subject_max_marks==='object'?(r.subject_max_marks[name]??'—'):'—')+'</td><td>'+escText(mark)+'</td></tr>').join(''):'<tr><td colspan="3">لا توجد مواد مسجلة</td></tr>';
     const seatNo=[r.seat_number,r.seat_no,r.seating_number,r.exam_seat_number,r.seating_no,r.seatNumber,r.exam_seat].find(v=>v!==null&&v!==undefined&&String(v).trim()!=='')??'غير مسجل';
@@ -174,7 +174,7 @@
     if(!admin()){showHome();window.alert('قسم نتائج الامتحانات متاح لمدير النظام فقط.');return;}
     $('#homeView').classList.add('hidden');$('#loginView').classList.add('hidden');$('#appView').classList.remove('hidden');$('#logoutBtn').classList.remove('hidden');
     $('#exportView').classList.add('hidden');$('#dataView').classList.remove('hidden');$('#dataView').classList.add('exam-admin-view');$('#tabs').classList.add('hidden');$('#refreshBtn').classList.add('hidden');
-    $('#sectionTitle').textContent='نتائج الامتحانات';$('#sectionDesc').textContent='نزّل نموذج Excel الذي يحتوي على شيتين للصف الأول والصف الثاني، أدخل الدرجات ثم ارفع الملف نفسه. بعد الحفظ سيصدر ملف رموز الدخول.';
+    $('#sectionTitle').textContent='نتيجة آخر العام';$('#sectionDesc').textContent='نزّل نموذج Excel الذي يحتوي على شيتين للصف الأول والصف الثاني، أدخل الدرجات ثم ارفع الملف نفسه. بعد الحفظ سيصدر ملف رموز الدخول.';
     $('#formHost').innerHTML='<div class="exam-import-panel"><div class="form-grid"><label>العام الدراسي<input id="examAcademicYear" type="text" value="2026/2027" required></label><label>الدور / الفصل الامتحاني<select id="examRound"><option>الدور الأول</option><option>الدور الثاني</option><option>الفصل الدراسي الأول</option><option>الفصل الدراسي الثاني</option><option>امتحان آخر</option></select></label><label>ملف Excel (.xlsx أو .xls)<input id="examExcelFile" type="file" accept=".xlsx,.xls,.csv" required></label></div><p>بعد الحفظ سيُنزَّل ملف Excel منفصل يحتوي على مسلسل واسم الطالبة والرقم القومي ورمز دخول عشوائي صالح لخمس مرات.</p><div class="form-actions"><button id="examImportBtn" type="button">رفع الشيت وإصدار رموز الدخول</button><button id="examIssueCodesBtn" type="button" class="secondary">إصدار رموز للنتائج المحفوظة</button><button id="examClearPreviousBtn" type="button" class="secondary">مسح الشيتات السابقة</button><button id="examSummaryTemplateBtn" type="button" class="secondary">تنزيل شيت ملخص النتائج والتوقيعات</button></div><div id="examImportMsg" class="message" aria-live="polite"></div></div>';
     $('#tableHead').innerHTML='';$('#tableBody').innerHTML='';$('#sectionMsg').textContent='';
     $('#examImportBtn').addEventListener('click',importExamWorkbook);$('#examIssueCodesBtn').addEventListener('click',issueExamCodesFromSavedResults);$('#examSummaryTemplateBtn').addEventListener('click',downloadExamSummaryTemplate);$('#examClearPreviousBtn').addEventListener('click',clearPreviousExamSheets);
