@@ -409,3 +409,11 @@ body{background:#eaf7f4}
  #studentCertificateHost .congrats-certificate .certificate-meta>div{font-size:9pt;padding:2mm}
  #studentCertificateHost .congrats-certificate .certificate-footer{margin-top:8mm}
 }
+
+/* Certificate signature alignment: principal left, controller right */
+#studentCertificateHost .certificate-footer{display:flex!important;flex-direction:row!important;justify-content:space-between!important;align-items:flex-end!important;direction:ltr!important}
+#studentCertificateHost .certificate-footer>span{display:flex;flex-direction:column;align-items:center;min-width:38%;text-align:center;direction:rtl}
+#studentCertificateHost .certificate-footer .principal-signature{order:1;margin-left:auto}
+#studentCertificateHost .certificate-footer .controller-signature{order:2;margin-right:auto}
+#studentCertificateHost .certificate-footer .signature-name{display:block;min-height:1.5em;margin-top:2mm;font-weight:800;color:#123b68}
+#studentCertificateHost .certificate-footer .signature-line{margin-top:1mm}
