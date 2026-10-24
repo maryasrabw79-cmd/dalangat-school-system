@@ -460,3 +460,8 @@ body{background:#eaf7f4}
 #studentCertificateHost .congrats-total-panel small{display:block!important;font-size:18px!important;font-weight:800!important;margin-top:8px!important;}
 @media(max-width:600px){#studentCertificateHost .congrats-details{flex-direction:column!important;align-items:stretch!important;font-size:17px!important;}#studentCertificateHost .congrats-details>span{text-align:right!important;}}
 @media print{#studentCertificateHost .congrats-details{width:100%!important;font-size:14pt!important;margin:4mm 0 5mm!important;padding:3mm 4mm!important;}#studentCertificateHost .congrats-total-panel small{font-size:13pt!important;}}
+
+/* Certificate footer: place the good-wishes line immediately above names and remove signature rules */
+#studentCertificateHost .congrats-certificate .congrats-promotion{margin:5mm 0 2mm!important;text-align:center!important;font-size:17px!important;font-weight:800!important;line-height:1.8!important;color:#174b82!important;}
+#studentCertificateHost .congrats-certificate .certificate-footer{border-top:0!important;padding-top:0!important;margin-top:3mm!important;}
+#studentCertificateHost .congrats-certificate .signature-line{display:none!important;}
