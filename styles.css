@@ -377,3 +377,35 @@ body{background:#eaf7f4}
 #studentCertificateHost .congrats-certificate .certificate-footer{display:flex;justify-content:space-around;gap:15mm;margin-top:7mm;padding-top:4mm;border-top:1px solid #c69a35;font-weight:800;text-align:center;color:#174b82}
 #studentCertificateHost .signature-line{width:45mm;max-width:100%;height:12mm;border-bottom:1px dotted #9c7a32;margin:0 auto}
 @media print{@page{size:A4 portrait!important;margin:5mm!important}#studentCertificateView{width:200mm!important;max-width:200mm!important;left:0!important;right:auto!important}#studentCertificateHost .congrats-certificate .certificate-ornament{min-height:275mm!important;padding:8mm!important;border:5px double #c69a35!important;print-color-adjust:exact;-webkit-print-color-adjust:exact}#studentCertificateHost .congrats-ribbon{font-size:20pt!important}#studentCertificateHost .congrats-student-name{font-size:23pt!important}#studentCertificateHost .congrats-certificate .certificate-meta>div{font-size:8pt!important;padding:1.5mm!important}#studentCertificateHost .congrats-certificate .certificate-matrix th,#studentCertificateHost .congrats-certificate .certificate-matrix td{font-size:7.5pt!important;padding:1mm!important}}
+
+/* Success certificate final layout: ceremony-first, no centered subject table */
+#studentCertificateHost .congrats-certificate{width:100%;max-width:100%;margin:0 auto;padding:0;border:0;background:#fff;color:#123b68;font-family:Tahoma,Arial,sans-serif}
+#studentCertificateHost .congrats-certificate .certificate-ornament{width:100%;min-height:250mm;box-sizing:border-box;padding:12mm 13mm 10mm;border:7px double #bd9130;outline:2px solid #174b82;outline-offset:-13px;background:linear-gradient(145deg,#fffef8 0%,#fff 48%,#f5faff 100%);box-shadow:inset 0 0 0 4px #f1e1b5;overflow:hidden}
+#studentCertificateHost .congrats-certificate .congrats-top{display:flex;justify-content:space-between;align-items:center;margin:0 2mm 4mm;color:#174b82;font-weight:800;font-size:13px}
+#studentCertificateHost .congrats-certificate .certificate-header{text-align:center;border-bottom:2px solid #bd9130;padding-bottom:6mm;margin:0 0 7mm}
+#studentCertificateHost .congrats-certificate .certificate-ministry,#studentCertificateHost .congrats-certificate .certificate-administration{font-size:13px;line-height:1.8;font-weight:800;color:#174b82}
+#studentCertificateHost .congrats-certificate .certificate-header h1{font-size:27px;margin:3mm 0;color:#123b68}
+#studentCertificateHost .congrats-certificate .congrats-ribbon{display:block;width:fit-content;max-width:90%;margin:6mm auto 3mm;padding:5mm 18mm;border:4px double #e0b64e;border-radius:18px;background:linear-gradient(135deg,#123b68,#28639a);color:#fff;font-size:27px;font-weight:900;box-shadow:0 4px 0 #bd9130}
+#studentCertificateHost .congrats-certificate .certificate-header h2{font-size:21px;margin:3mm 0 0;color:#9a701d}
+#studentCertificateHost .congrats-certificate .congrats-message{text-align:center;font-size:18px;font-weight:700;margin:8mm 0 3mm;color:#183e60}
+#studentCertificateHost .congrats-certificate .congrats-student-name{text-align:center;font-size:32px;font-weight:900;color:#9a701d;margin:3mm auto 7mm;padding:3mm 10mm;border-bottom:3px solid #bd9130;width:fit-content;max-width:95%;overflow-wrap:anywhere}
+#studentCertificateHost .congrats-certificate .certificate-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3mm;margin:5mm 0}
+#studentCertificateHost .congrats-certificate .certificate-meta>div{box-sizing:border-box;border:1px solid #d8bd78;border-radius:7px;padding:3mm 4mm;background:#fffdf6;font-size:12px;overflow-wrap:anywhere}
+#studentCertificateHost .congrats-certificate .congrats-promotion{text-align:center;font-size:17px;font-weight:800;line-height:2;margin:7mm 0;color:#174b82}
+#studentCertificateHost .congrats-total-panel{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2mm;margin:6mm auto;padding:6mm 12mm;max-width:75%;border:4px double #bd9130;border-radius:15px;background:linear-gradient(135deg,#fff9e8,#f5faff);color:#123b68;text-align:center}
+#studentCertificateHost .congrats-total-panel span{font-size:17px;font-weight:800}
+#studentCertificateHost .congrats-total-panel strong{font-size:42px;line-height:1.2;color:#9a701d}
+#studentCertificateHost .congrats-total-panel small{font-size:14px;font-weight:700}
+#studentCertificateHost .congrats-certificate .certificate-result{margin:6mm 0;padding:4mm;border:2px solid #bd9130;background:#fffdf4;color:#174b82;text-align:center;font-size:17px;font-weight:900}
+#studentCertificateHost .congrats-certificate .certificate-footer{display:flex;justify-content:space-around;gap:15mm;margin-top:12mm;padding-top:5mm;border-top:1px solid #bd9130;text-align:center;color:#174b82;font-size:14px;font-weight:800}
+#studentCertificateHost .congrats-certificate .signature-line{width:48mm;max-width:100%;height:14mm;border-bottom:1px dotted #9a701d;margin:0 auto}
+@media print{
+ @page{size:A4 portrait;margin:5mm}
+ #studentCertificateView{position:absolute!important;left:0!important;top:0!important;width:200mm!important;max-width:200mm!important;margin:0!important;padding:0!important}
+ #studentCertificateHost .congrats-certificate .certificate-ornament{min-height:275mm;padding:9mm 10mm 7mm;border:5px double #bd9130;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+ #studentCertificateHost .congrats-certificate .congrats-ribbon{font-size:21pt;padding:4mm 12mm}
+ #studentCertificateHost .congrats-certificate .congrats-student-name{font-size:25pt}
+ #studentCertificateHost .congrats-total-panel strong{font-size:34pt}
+ #studentCertificateHost .congrats-certificate .certificate-meta>div{font-size:9pt;padding:2mm}
+ #studentCertificateHost .congrats-certificate .certificate-footer{margin-top:8mm}
+}
