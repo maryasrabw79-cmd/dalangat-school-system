@@ -59,7 +59,7 @@
     const escText=v=>esc(v===null||v===undefined||String(v).trim()===''?'—':v);
     const failedRaw=r.failed_subjects??r.subjects_failed??r.failing_subjects??'';
     const failedList=Array.isArray(failedRaw)?failedRaw.join('، '):String(failedRaw||'').trim();
-    const subjectRows=subjects.length?subjects.map(([name,mark])=>'<tr><td>'+esc(name)+'</td><td>'+escText(maxFor(name))+'</td><td>'+escText(mark)+'</td></tr>').join(''):'<tr><td colspan="3">لا توجد مواد مسجلة</td></tr>';
+    const subjectRows=subjects.length?subjects.map(([name,mark])=>'<tr><td>'+esc(name)+'</td><td>'+escText(r.subject_max_marks&&typeof r.subject_max_marks==='object'?(r.subject_max_marks[name]??'—'):'—')+'</td><td>'+escText(mark)+'</td></tr>').join(''):'<tr><td colspan="3">لا توجد مواد مسجلة</td></tr>';
     const seatNo=[r.seat_number,r.seat_no,r.seating_number,r.exam_seat_number,r.seating_no,r.seatNumber,r.exam_seat].find(v=>v!==null&&v!==undefined&&String(v).trim()!=='')??'غير مسجل';
     const specialization=String(r.specialization??r.department??r.trade??r.program??r.specialty??'').trim();
     const meta=[['اسم الطالبة',r.full_name],['الرقم القومي',r.national_id],['رقم الجلوس',seatNo],['الصف',r.grade],['الفصل',r.section],['التخصص',specialization],['العام الدراسي',r.academic_year],['الدور',r.exam_round]].filter(x=>x[1]!==null&&x[1]!==undefined&&String(x[1]).trim()!=='');
