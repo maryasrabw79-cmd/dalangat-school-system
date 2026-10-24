@@ -46,7 +46,7 @@
       const response=await callAccessFunction({action:'student_exam_login',national_id:nationalId,access_code:accessCode});
       if(!response?.certificate)throw new Error('تعذر تحميل الشهادة.');
       renderStudentCertificate(response.certificate,response.uses_remaining);
-      $('#studentResultsLoginView').classList.add('hidden');$('#studentCertificateView').classList.remove('hidden');$('#homeBtn').classList.remove('hidden');
+      $('#studentResultsLoginView').classList.add('hidden');$('#studentCertificateView').classList.remove('hidden');$('#studentCertificateView').style.display='block';$('#studentCertificateHost').style.display='block';$('#homeView').classList.add('hidden');$('#appView').classList.add('hidden');$('#homeBtn').classList.remove('hidden');
     }catch(err){say('#studentExamLoginMsg',err?.message||'تعذر تسجيل الدخول. تأكدي من البيانات وحاولي مرة أخرى.','error');}
     finally{btn.disabled=false;btn.textContent='عرض الشهادة';}
   }
@@ -137,7 +137,20 @@
     }catch(err){console.error('Account activation error:',err);say('#registerMsg','تعذر إنشاء الحساب: '+(err?.message||String(err)),'error');}
     finally{btn.disabled=false;btn.textContent='إنشاء الحساب';}
   }
-  async function logout(){await state.client.auth.signOut();showHome();}
+  async function logout(){
+    const button=$('#logoutBtn');
+    if(button){button.disabled=true;button.textContent='جارٍ تسجيل الخروج...';}
+    try{
+      if(state.client?.auth){const {error}=await state.client.auth.signOut();if(error)throw error;}
+      state.user=null;state.profile=null;state.role='viewer';state.pendingAction=null;
+      hideStudentResultViews();showHome();
+      $('#appView').classList.add('hidden');$('#loginView').classList.add('hidden');$('#registerView').classList.add('hidden');
+      $('#homeView').classList.remove('hidden');$('#logoutBtn').classList.add('hidden');
+    }catch(err){
+      console.error('Logout error:',err);
+      say('#sectionMsg','تعذر تسجيل الخروج من الخادم: '+(err?.message||String(err)),'error');
+    }finally{if(button){button.disabled=false;button.textContent='تسجيل الخروج';}}
+  }
   async function loadProfile(){
     const {data,error}=await state.client.from('profiles').select('*').eq('id',state.user.id).maybeSingle();
     if(error){ showLogin();say('#loginMsg','تعذر قراءة صلاحيات الحساب: '+error.message,'error');return; }
