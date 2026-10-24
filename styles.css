@@ -465,3 +465,14 @@ body{background:#eaf7f4}
 #studentCertificateHost .congrats-certificate .congrats-promotion{margin:5mm 0 2mm!important;text-align:center!important;font-size:17px!important;font-weight:800!important;line-height:1.8!important;color:#174b82!important;}
 #studentCertificateHost .congrats-certificate .certificate-footer{border-top:0!important;padding-top:0!important;margin-top:3mm!important;}
 #studentCertificateHost .congrats-certificate .signature-line{display:none!important;}
+
+
+/* Centered help and support page */
+body:has(#supportView:not(.hidden)){background:#fff;}
+body:has(#supportView:not(.hidden)) .container{max-width:none;margin:0;padding:0;}
+.support-view{min-height:calc(100vh - 154px);display:flex;align-items:center;justify-content:center;background:#fff;padding:28px;text-align:center;}
+.support-message{max-width:900px;margin:auto;color:#173b60;font-size:clamp(21px,3vw,32px);font-weight:800;line-height:2;}
+.support-message p{margin:0 0 14px;}
+.support-message a{display:inline-block;color:#1769aa;font-size:clamp(20px,2.7vw,29px);font-weight:800;text-decoration:none;direction:ltr;}
+.support-message a:hover{text-decoration:underline;}
+@media(max-width:600px){.support-view{min-height:calc(100vh - 154px);padding:20px;}.support-message{font-size:22px;line-height:1.9;}}
