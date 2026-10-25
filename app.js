@@ -126,9 +126,9 @@
         return {name:label,mark,max:sourceMax};
       });
       const halfTables=['<table class="half-year-grade-table"><tbody>'+
-        '<tr class="half-year-subject-names">'+halfSubjectCells.map(x=>'<th>'+esc(x.name)+'</th>').join('')+'</tr>'+
-        '<tr class="half-year-max-marks">'+halfSubjectCells.map(x=>'<td>'+escText(x.max)+'</td>').join('')+'</tr>'+
-        '<tr class="half-year-student-marks">'+halfSubjectCells.map(x=>'<td>'+escText(x.mark)+'</td>').join('')+'</tr>'+
+        '<tr class="half-year-subject-names"><th class="half-year-row-label">المادة</th>'+halfSubjectCells.map(x=>'<th>'+esc(x.name)+'</th>').join('')+'</tr>'+
+        '<tr class="half-year-max-marks"><th class="half-year-row-label">درجة المادة</th>'+halfSubjectCells.map(x=>'<td>'+escText(x.max)+'</td>').join('')+'</tr>'+
+        '<tr class="half-year-student-marks"><th class="half-year-row-label">درجة الطالبة</th>'+halfSubjectCells.map(x=>'<td>'+escText(x.mark)+'</td>').join('')+'</tr>'+
         '</tbody></table>'];
       const halfController=controllerName||'';
       const halfPrincipal=principalName||'';
