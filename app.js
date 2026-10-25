@@ -502,25 +502,42 @@
         resultWs['!autofilter']={ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:Math.max(1,resultRows.length+1),c:resultHeaders.length-1}})};
         resultWs['!freeze']={xSplit:2,ySplit:2};
         // احتفظ بنسخة من كل شيت رفعه المستخدم كما هو، وأضف عمود رمز الدخول فقط.
-        const codeById=new Map(issued.codes.map(r=>[examId(r.national_id),String(r.access_code??'')]));
-        const uploadedCodeSheets=sheetGrids.map((item,si)=>{
+        const normalizeStudentId=value=>{const id=examId(value);return id?id.padStart(14,'0'):'';};
+        const normalizeStudentName=value=>examHeader(value).replace(/[^a-z0-9ء-ي]/g,'');
+        const codeById=new Map(),codeByName=new Map();
+        issued.codes.forEach(r=>{
+          const code=String(r.access_code??r.entry_code??r.code??'');
+          const id=normalizeStudentId(r.national_id);
+          const name=normalizeStudentName(r.full_name??r.student_name??r.name);
+          if(id&&code)codeById.set(id,code);
+          if(name&&code)codeByName.set(name,code);
+        });
+        const uploadedCodeSheets=sheetGrids.map(item=>{
           const data=item.grid.map(row=>row.slice());
           const hi=data.findIndex(row=>row.some(v=>/الرقم القومي|national.?id/i.test(String(v??'')))&&row.some(v=>/اسم الطالبة|اسم الطالب|full.?name|student.?name/i.test(String(v??''))));
           if(hi<0)return null;
           const hdr=data[hi].map(v=>String(v??'').trim());
           const idCol=examField(hdr,['الرقم القومي','رقم قومي','الرقم القومى','رقم الطالبة القومي','الرقم القومي للطالبة','national_id','national id','nationalid','id number']);
+          const nameCol=examField(hdr,['اسم الطالبة','اسم الطالب','اسم الطالبه','اسم الطالبة بالكامل','الاسم الكامل','full_name','student name','studentname','name']);
           if(idCol<0)return null;
           const codeCol=hdr.length;
           data[hi][codeCol]='رمز الدخول';
+          let matched=0;
           for(let ri=hi+1;ri<data.length;ri++){
-            const id=examId(data[ri]?.[idCol]);
-            if(id)data[ri][codeCol]=codeById.get(id)||'';
+            const row=data[ri]||[];
+            const id=normalizeStudentId(row[idCol]);
+            const name=nameCol>=0?normalizeStudentName(row[nameCol]):'';
+            const code=(id&&codeById.get(id))||(name&&codeByName.get(name))||'';
+            if(code){row[codeCol]=code;matched++;}
           }
+          if(matched===0)console.warn('No exam access codes matched uploaded sheet:',item.name,'codes:',issued.codes.length);
           const ws=XLSX.utils.aoa_to_sheet(data);
           ws['!views']=[{rightToLeft:true}];
           ws['!cols']=[...hdr.map(h=>({wch:Math.max(12,Math.min(30,String(h||'').length+5))})),{wch:16}];
-          return {name:item.name,ws};
+          return {name:item.name,ws,matched};
         }).filter(Boolean);
+        if(!uploadedCodeSheets.some(s=>s.matched>0))throw new Error('صدرت رموز الدخول، لكن لم أتمكن من مطابقة الأرقام القومية مع الشيت المرفوع. تأكد أن عمود الرقم القومي موجود في الشيت.');
+
         const wb=XLSX.utils.book_new();
         if(state.examMode==='half_year'){
           const gradeOf=r=>{const g=examHeader(r.grade||'');return /الثاني|^2$|grade2|second/.test(g)?'الثاني':'الأول';};
