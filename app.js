@@ -518,7 +518,7 @@
           }
           const ws=XLSX.utils.aoa_to_sheet(data);
           ws['!views']=[{rightToLeft:true}];
-          ws['!cols']=[...(hdr.map(h=>({wch:Math.max(12,Math.min(30,String(h||'').length+5))})),{wch:16}];
+          ws['!cols']=[...hdr.map(h=>({wch:Math.max(12,Math.min(30,String(h||'').length+5))})),{wch:16}];
           return {name:item.name,ws};
         }).filter(Boolean);
         const wb=XLSX.utils.book_new();
