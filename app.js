@@ -420,22 +420,36 @@
       if(headerRow<0)throw new Error('لم أتمكن من تحديد عمود الرقم القومي وعمود اسم الطالبة. تأكد أن الشيت يحتوي على أرقام قومية صحيحة وأسماء طالبات في صفوف البيانات.');
       const gradeI=examField(headers,['الصف','الصف الدراسي','المرحلة','grade','year']),sectionI=examField(headers,['الفصل','الشعبة','section','class']),specI=examField(headers,['التخصص','الشعبة التخصصية','specialization','specialty']),seatI=examField(headers,['رقم الجلوس','رقم جلوس','جلوس','seat number','seat_no','seat_number']),religionI=examField(headers,['الديانة','ديانة الطالبة','ديانة','religion']),totalI=examField(headers,['مجموع الطالبة','مجموع الطالبه','مجموع الطالب','درجة الطالبة','المجموع المحصل','المجموع الكلي','المجموع الكلى','total score','total_score','total','المجموع']),maxI=examField(headers,['الدرجة الكلية','الدرجة الكلية للطالبة','النهاية العظمى','إجمالي الدرجة النهائية','الدرجة النهائية','المجموع النهائي','max total','max_total','maximum','maximum total','total maximum']),principalI=examField(headers,['مدير المدرسة','اسم المدير','اسم مدير المدرسة','principal name','principal_name','school principal']),controllerI=examField(headers,['رئيس الكنترول','اسم رئيس الكنترول','رئيس لجنة الكنترول','اسم رئيس لجنة الكنترول','controller name','controller_name','head controller']),pctI=examField(headers,['النسبة','النسبة المئوية','percentage','percent']),statusI=examField(headers,['النتيجة','حالة النتيجة','الحالة العامة','حالة الطالب','حالة الطالبة','result','result status','result_status']),failedI=examField(headers,['مواد الدور الثاني','مواد الرسوب','مواد التخلف','failed subjects','subjects failed']);
       const serialI=examField(headers,['مسلسل','م','م.','تسلسل','serial','serial number']),reserved=new Set([idI,nameI,gradeI,sectionI,specI,seatI,religionI,totalI,maxI,principalI,controllerI,pctI,statusI,failedI,serialI].filter(i=>i>=0)),subjectHeaders=headers.map((h,i)=>({h,i})).filter(x=>x.h&&!reserved.has(x.i)),rows=[],errors=[],seen=new Set();
-      // التقط صف النهاية العظمى أينما ورد بعد العناوين؛ فقد يأتي بعد صفوف الطالبات.
       let maxMarksRow=null,dataStart=headerRow+1,principalFromSheet='',controllerFromSheet='';
       const maxMarksRowIndexes=new Set();
-      for(let ri=headerRow+1;ri<grid.length;ri++){
-        const cells=grid[ri]||[];
-        const hasIdentity=!!examId(cells[idI])||!!examCell(cells,nameI);
-        const numericSubjects=subjectHeaders.map(col=>({name:col.h,raw:examCell(cells,col.i)}))
-          .filter(x=>x.raw!==''&&Number.isFinite(Number(x.raw.replace(/,/g,''))));
-        if(!hasIdentity&&numericSubjects.length>=2){
-          const candidate={};
-          numericSubjects.forEach(x=>candidate[x.name]=Number(x.raw.replace(/,/g,'')));
-          maxMarksRow=candidate;
-          maxMarksRowIndexes.add(ri);
-          const principal=examCell(cells,principalI),controller=examCell(cells,controllerI);
-          if(principal)principalFromSheet=principal;
-          if(controller)controllerFromSheet=controller;
+      if(state.examMode==='half_year'){
+        // نتيجة نصف العام: قد يأتي صف النهاية العظمى بعد صفوف الطالبات.
+        for(let ri=headerRow+1;ri<grid.length;ri++){
+          const cells=grid[ri]||[];
+          const hasIdentity=!!examId(cells[idI])||!!examCell(cells,nameI);
+          const numericSubjects=subjectHeaders.map(col=>({name:col.h,raw:examCell(cells,col.i)}))
+            .filter(x=>x.raw!==''&&Number.isFinite(Number(x.raw.replace(/,/g,''))));
+          if(!hasIdentity&&numericSubjects.length>=2){
+            const candidate={};
+            numericSubjects.forEach(x=>candidate[x.name]=Number(x.raw.replace(/,/g,'')));
+            maxMarksRow=candidate;
+            maxMarksRowIndexes.add(ri);
+            const principal=examCell(cells,principalI),controller=examCell(cells,controllerI);
+            if(principal)principalFromSheet=principal;
+            if(controller)controllerFromSheet=controller;
+          }
+        }
+      }else{
+        // إبقاء طريقة استيراد نتيجة آخر العام كما هي دون تغيير.
+        const firstData=grid[dataStart]||[];
+        const firstHasIdentity=!!examId(firstData[idI])||!!examCell(firstData,nameI);
+        const firstNumericSubjects=subjectHeaders.map(col=>({name:col.h,raw:examCell(firstData,col.i)})).filter(x=>x.raw!==''&&Number.isFinite(Number(x.raw.replace(/,/g,''))));
+        if(!firstHasIdentity&&firstNumericSubjects.length){
+          maxMarksRow={};firstNumericSubjects.forEach(x=>maxMarksRow[x.name]=Number(x.raw.replace(/,/g,'')));
+          maxMarksRowIndexes.add(dataStart);
+          principalFromSheet=examCell(firstData,principalI);
+          controllerFromSheet=examCell(firstData,controllerI);
+          dataStart++;
         }
       }
       for(let ri=dataStart;ri<grid.length;ri++){
