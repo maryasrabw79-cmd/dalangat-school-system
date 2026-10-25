@@ -371,7 +371,7 @@
       }
       if(headerRow<0)throw new Error('لم أتمكن من تحديد عمود الرقم القومي وعمود اسم الطالبة. تأكد أن الشيت يحتوي على أرقام قومية صحيحة وأسماء طالبات في صفوف البيانات.');
       const gradeI=examField(headers,['الصف','الصف الدراسي','المرحلة','grade','year']),sectionI=examField(headers,['الفصل','الشعبة','section','class']),specI=examField(headers,['التخصص','الشعبة التخصصية','specialization','specialty']),seatI=examField(headers,['رقم الجلوس','رقم جلوس','جلوس','seat number','seat_no','seat_number']),religionI=examField(headers,['الديانة','ديانة الطالبة','ديانة','religion']),totalI=examField(headers,['مجموع الطالبة','مجموع الطالبه','مجموع الطالب','درجة الطالبة','المجموع المحصل','المجموع الكلي','المجموع الكلى','total score','total_score','total','المجموع']),maxI=examField(headers,['الدرجة الكلية','الدرجة الكلية للطالبة','النهاية العظمى','إجمالي الدرجة النهائية','الدرجة النهائية','المجموع النهائي','max total','max_total','maximum','maximum total','total maximum']),principalI=examField(headers,['مدير المدرسة','اسم المدير','اسم مدير المدرسة','principal name','principal_name','school principal']),controllerI=examField(headers,['رئيس الكنترول','اسم رئيس الكنترول','رئيس لجنة الكنترول','اسم رئيس لجنة الكنترول','controller name','controller_name','head controller']),pctI=examField(headers,['النسبة','النسبة المئوية','percentage','percent']),statusI=examField(headers,['النتيجة','حالة النتيجة','الحالة العامة','حالة الطالب','حالة الطالبة','result','result status','result_status']),failedI=examField(headers,['مواد الدور الثاني','مواد الرسوب','مواد التخلف','failed subjects','subjects failed']);
-      const reserved=new Set([idI,nameI,gradeI,sectionI,specI,seatI,religionI,totalI,maxI,principalI,controllerI,pctI,statusI,failedI].filter(i=>i>=0)),subjectHeaders=headers.map((h,i)=>({h,i})).filter(x=>x.h&&!reserved.has(x.i)),rows=[],errors=[],seen=new Set();
+      const serialI=examField(headers,['مسلسل','م','م.','تسلسل','serial','serial number']),reserved=new Set([idI,nameI,gradeI,sectionI,specI,seatI,religionI,totalI,maxI,principalI,controllerI,pctI,statusI,failedI,serialI].filter(i=>i>=0)),subjectHeaders=headers.map((h,i)=>({h,i})).filter(x=>x.h&&!reserved.has(x.i)),rows=[],errors=[],seen=new Set();
       // التقط صف النهاية العظمى إذا كان موضوعًا مباشرة أسفل رؤوس الأعمدة.
       let maxMarksRow=null,dataStart=headerRow+1;
       const firstData=grid[dataStart]||[];
@@ -445,13 +445,18 @@
   function downloadExamTemplate(){
     if(typeof XLSX==='undefined'){window.alert('مكتبة Excel غير متاحة.');return;}
     // نموذج ثابت داخل المنظومة: شيت مستقل لكل صف، وصف النهاية العظمى أسفل العناوين.
-    const headers=['الرقم القومي','اسم الطالبة','رقم الجلوس','الصف','الفصل','التخصص','لغة عربية','لغة إنجليزية','رياضيات','فيزياء','كيمياء','دراسات اجتماعية','حاسب آلي','الوحدة الأولى','الوحدة الثانية','الوحدة الثالثة','الوحدة الرابعة','الوحدة الخامسة','الوحدة السادسة','الوحدة السابعة','الوحدة الثامنة','الوحدة التاسعة','تربية دينية','تربية قومية','المجموع','النهاية العظمى','النسبة المئوية','النتيجة','مواد الرسوب','مواد الدور الثاني','رئيس الكنترول','مدير المدرسة'];
-    const maxMarks=['','','','','','',50,40,30,20,20,20,20,'','','','','','','','','','','','','','','','','',''];
-    const makeSheet=(grade)=>{const ws=XLSX.utils.aoa_to_sheet([headers,maxMarks]);ws['!views']=[{rightToLeft:true}];ws['!cols']=headers.map((h,i)=>({wch:i===0?20:i===1?30:i===4?28: i>=5&&i<=13?16:18}));ws['!autofilter']={ref:'A1:AF2'};ws['!freeze']={xSplit:2,ySplit:2};return ws;};
+    const halfYear = state.examMode === 'half_year';
+    const headers = halfYear
+      ? ['مسلسل','رقم الجلوس','اسم الطالبة','الرقم القومي','الديانة','الصف','التخصص','اللغة العربية','اللغة الإنجليزية','الرياضيات','الفيزياء','الكيمياء','الدراسات الاجتماعية','الحاسب الآلي','الوحدة الأولى','الوحدة الثانية','الوحدة الثالثة','الوحدة الرابعة','الوحدة الخامسة','المجموع','التربية القومية','التربية الدينية','رئيس الكنترول','مدير المدرسة']
+      : ['الرقم القومي','اسم الطالبة','رقم الجلوس','الصف','الفصل','التخصص','لغة عربية','لغة إنجليزية','رياضيات','فيزياء','كيمياء','دراسات اجتماعية','حاسب آلي','الوحدة الأولى','الوحدة الثانية','الوحدة الثالثة','الوحدة الرابعة','الوحدة الخامسة','الوحدة السادسة','الوحدة السابعة','الوحدة الثامنة','الوحدة التاسعة','تربية دينية','تربية قومية','المجموع','النهاية العظمى','النسبة المئوية','النتيجة','مواد الرسوب','مواد الدور الثاني','رئيس الكنترول','مدير المدرسة'];
+    const maxMarks = halfYear
+      ? ['','','','','','','',25,20,15,10,10,10,10,'','','','', '',100,10,10,'','']
+      : ['','','','','','',50,40,30,20,20,20,20,'','','','','','','','','','','','','','','','','',''];
+    const makeSheet=(grade)=>{const ws=XLSX.utils.aoa_to_sheet([headers,maxMarks]);ws['!views']=[{rightToLeft:true}];ws['!cols']=headers.map((h,i)=>({wch:/اسم الطالبة/.test(h)?30:/الرقم القومي/.test(h)?20:/رقم الجلوس/.test(h)?15:/رئيس الكنترول|مدير المدرسة/.test(h)?24:/الوحدة/.test(h)?16:18}));ws['!autofilter']={ref:'A1:'+XLSX.utils.encode_col(headers.length-1)+'2'};ws['!freeze']={xSplit:3,ySplit:2};return ws;};
     const wb=XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb,makeSheet('الأول'),'الصف الأول');
     XLSX.utils.book_append_sheet(wb,makeSheet('الثاني'),'الصف الثاني');
-    XLSX.writeFile(wb,state.examMode==='half_year'?'نتيجة_الصف_الأول_والثاني.xlsx':'نموذج_نتائج_الامتحانات_الصف_الأول_والثاني.xlsx');
+    XLSX.writeFile(wb,state.examMode==='half_year'?'نتيجة_الفصل_الدراسي_الأول_الصف_الأول_والثاني.xlsx':'نموذج_نتائج_الامتحانات_الصف_الأول_والثاني.xlsx');
   }
   async function downloadExamSummaryTemplate(){
     if(typeof XLSX==='undefined'){window.alert('مكتبة Excel غير متاحة.');return;}
