@@ -99,12 +99,37 @@
     if(state.studentResultMode==='half_year'){
       const halfMeta=[['اسم الطالبة',r.full_name],['رقم الجلوس',seatNo],['الرقم القومي',r.national_id],['الديانة',r.religion],['الصف',gradeText],['التخصص',specialization]].filter(x=>x[1]!==null&&x[1]!==undefined&&String(x[1]).trim()!=='');
       const halfMetaHtml=halfMeta.map(([k,v])=>'<div class="half-year-meta-item"><strong>'+esc(k)+':</strong><span>'+esc(v)+'</span></div>').join('');
-      const halfSubjectCells=subjects.map(([name,mark])=>({name,mark})).filter(x=>! /^(?:مسلسل|م|رقم الجلوس|الرقم القومي|اسم الطالبة|الديانة|الصف|الفصل|التخصص|المجموع|النهاية العظمى|النسبة المئوية|النتيجة|مواد الرسوب|مواد الدور الثاني|رئيس الكنترول|مدير المدرسة)$/i.test(String(x.name).trim()));
-      const halfTables=[];
-      for(let i=0;i<halfSubjectCells.length;i+=7){
-        const group=halfSubjectCells.slice(i,i+7);
-        halfTables.push('<table class="half-year-grade-table"><thead><tr>'+group.map(x=>'<th>'+esc(x.name)+'</th>').join('')+'</tr></thead><tbody><tr>'+group.map(x=>'<td>'+escText(x.mark)+'</td>').join('')+'</tr></tbody></table>');
-      }
+      // First-semester certificate: exactly 15 columns, including the total.
+      // Keep the agreed template order: 7 core subjects, 5 units, total, national education, religion.
+      const halfExpected=[
+        ['اللغة العربية',25],['اللغة الإنجليزية',20],['الرياضيات',15],['الفيزياء',10],['الكيمياء',10],
+        ['الدراسات الاجتماعية',10],['الحاسب الآلي',10],['الوحدة الأولى',null],['الوحدة الثانية',null],
+        ['الوحدة الثالثة',null],['الوحدة الرابعة',null],['الوحدة الخامسة',null],['المجموع',100],
+        ['التربية القومية',10],['التربية الدينية',10]
+      ];
+      const normalizedHalfSubjects=new Map(subjects.map(([name,mark])=>[examHeader(name),{name,mark}]));
+      const halfSubjectCells=halfExpected.map(([label,fallbackMax])=>{
+        const key=examHeader(label);
+        const match=[...normalizedHalfSubjects.entries()].find(([name])=>name===key ||
+          (label==='اللغة الإنجليزية'&&/انجليزي|انجليزيه/.test(name)) ||
+          (label==='الحاسب الآلي'&&/حاسب/.test(name)) ||
+          (label==='الدراسات الاجتماعية'&&/دراسات/.test(name)) ||
+          (label==='التربية القومية'&&/تربيه قوميه/.test(name)) ||
+          (label==='التربية الدينية'&&/تربيه دينيه/.test(name)) ||
+          (label==='المجموع'&&/مجموع|اجمالي|اجمالى|total/.test(name)));
+        const mark=label==='المجموع'
+          ? (r.total??match?.[1]?.mark??'')
+          : (match?.[1]?.mark??'');
+        const sourceMax=r.subject_max_marks&&typeof r.subject_max_marks==='object'
+          ? (r.subject_max_marks[match?.[1]?.name||label]??r.subject_max_marks[label]??fallbackMax)
+          : fallbackMax;
+        return {name:label,mark,max:sourceMax};
+      });
+      const halfTables=['<table class="half-year-grade-table"><tbody>'+
+        '<tr class="half-year-subject-names">'+halfSubjectCells.map(x=>'<th>'+esc(x.name)+'</th>').join('')+'</tr>'+
+        '<tr class="half-year-max-marks">'+halfSubjectCells.map(x=>'<td>'+escText(x.max)+'</td>').join('')+'</tr>'+
+        '<tr class="half-year-student-marks">'+halfSubjectCells.map(x=>'<td>'+escText(x.mark)+'</td>').join('')+'</tr>'+
+        '</tbody></table>'];
       const halfController=controllerName||'';
       const halfPrincipal=principalName||'';
       $('#studentCertificateHost').innerHTML='<article class="student-certificate half-year-certificate" dir="rtl"><div class="half-year-certificate-frame"><div class="half-year-certificate-top"><div>محافظة البحيرة</div><div>مديرية التربية والتعليم بالبحيرة</div><div>إدارة الدلنجات التعليمية</div><h1>مدرسة الدلنجات الصناعية بنات</h1><div class="half-year-title">شهادة نتيجة الفصل الدراسي الأول</div></div><section class="half-year-student-info"><h2>بيانات الطالبة</h2><div class="half-year-meta-grid">'+halfMetaHtml+'</div></section><section class="half-year-grades"><h2>بيان المواد والوحدات ودرجات الطالبة</h2>'+(halfTables.join('')||'<p>لا توجد مواد أو درجات مسجلة في الشيت.</p>')+'</section><footer class="half-year-signatures"><div><strong>رئيس الكنترول</strong><span>'+esc(halfController)+'</span></div><div><strong>مدير المدرسة</strong><span>'+esc(halfPrincipal)+'</span></div></footer><div class="half-year-certificate-bottom">مع أطيب الأمنيات بالتوفيق والنجاح</div></div></article><p class="no-print certificate-usage-note">مرات الدخول المتبقية لهذا الرمز: '+esc(remaining)+' (من أصل 5).</p>';
