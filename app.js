@@ -93,8 +93,8 @@
     const isSecondRound=/دور\s*ثان|دور\s*ثاني|الدور\s*الثاني|تخلف|إعادة/.test(statusNorm)||Boolean(failedList);
     const metaHtml=meta.map(([k,v])=>'<div><strong>'+esc(k)+':</strong> '+esc(v)+'</div>').join('');
     const summaryHtml=summary.length?'<div class="certificate-summary">'+summary.map(([k,v])=>'<div><strong>'+esc(k)+':</strong> '+esc(v)+'</div>').join('')+'</div>':'';
-    const principalName=String(r.principal_name??r.school_principal??r.principal??r.manager_name??'').trim();
-    const controllerName=String(r.controller_name??r.head_controller??r.exam_controller??r.chief_controller??r.committee_head??'').trim();
+    const principalName=String(r.principal_name??r.school_principal??r.principal??r.manager_name??r['مدير المدرسة']??r['اسم المدير']??r['اسم مدير المدرسة']??'').trim();
+    const controllerName=String(r.controller_name??r.head_controller??r.exam_controller??r.chief_controller??r.committee_head??r['رئيس الكنترول']??r['اسم رئيس الكنترول']??r['رئيس لجنة الكنترول']??r['اسم رئيس لجنة الكنترول']??'').trim();
     const footerHtml='<p class="congrats-promotion">مع أطيب الأمنيات بدوام التقدم والنجاح</p><footer class="certificate-footer"><span class="principal-signature"><strong>مدير المدرسة</strong><span class="signature-name">'+esc(principalName||'')+'</span></span><span class="controller-signature"><strong>رئيس الكنترول</strong><span class="signature-name">'+esc(controllerName||'')+'</span></span></footer>';
     if(state.studentResultMode==='half_year'){
       const halfMeta=[['اسم الطالبة',r.full_name],['رقم الجلوس',seatNo],['الرقم القومي',r.national_id],['الديانة',r.religion],['الصف',gradeText],['التخصص',specialization]].filter(x=>x[1]!==null&&x[1]!==undefined&&String(x[1]).trim()!=='');
@@ -108,21 +108,32 @@
         ['التربية القومية',10],['التربية الدينية',10]
       ];
       const normalizedHalfSubjects=new Map(subjects.map(([name,mark])=>[examHeader(name),{name,mark}]));
-      const halfSubjectCells=halfExpected.map(([label,fallbackMax])=>{
+      const findHalfValue=(label)=>{
         const key=examHeader(label);
         const match=[...normalizedHalfSubjects.entries()].find(([name])=>name===key ||
-          (label==='اللغة الإنجليزية'&&/انجليزي|انجليزيه/.test(name)) ||
+          (label==='اللغة العربية'&&/عربي/.test(name)) ||
+          (label==='اللغة الإنجليزية'&&/انجليزي/.test(name)) ||
+          (label==='الرياضيات'&&/رياضيات/.test(name)) ||
+          (label==='الفيزياء'&&/فيزياء/.test(name)) ||
+          (label==='الكيمياء'&&/كيمياء/.test(name)) ||
           (label==='الحاسب الآلي'&&/حاسب/.test(name)) ||
           (label==='الدراسات الاجتماعية'&&/دراسات/.test(name)) ||
-          (label==='التربية القومية'&&/تربيه قوميه/.test(name)) ||
-          (label==='التربية الدينية'&&/تربيه دينيه/.test(name)) ||
-          (label==='المجموع'&&/مجموع|اجمالي|اجمالى|total/.test(name)));
+          (label==='التربية القومية'&&/تربيهقوميه/.test(name)) ||
+          (label==='التربية الدينية'&&/تربيه دينيه|تربيه ديني/.test(name)) ||
+          (/^الوحدة/.test(label)&&name.includes(key)) ||
+          (label==='المجموع'&&/مجموع|اجمالي|total/.test(name)));
+        if(match)return match[1];
+        // Some stored certificate responses return the imported columns at the top level.
+        const direct=Object.entries(r||{}).find(([name])=>examHeader(name)===key);
+        return direct?{name:direct[0],mark:direct[1]}:null;
+      };
+      const halfSubjectCells=halfExpected.map(([label,fallbackMax])=>{
+        const match=findHalfValue(label);
         const mark=label==='المجموع'
-          ? (r.total??match?.[1]?.mark??'')
-          : (match?.[1]?.mark??'');
-        const sourceMax=r.subject_max_marks&&typeof r.subject_max_marks==='object'
-          ? (r.subject_max_marks[match?.[1]?.name||label]??r.subject_max_marks[label]??fallbackMax)
-          : fallbackMax;
+          ? (r.total??r.total_score??r['المجموع']??r['المجموع الكلي']??match?.mark??'')
+          : (match?.mark??'');
+        const maxMarks=r.subject_max_marks&&typeof r.subject_max_marks==='object'?r.subject_max_marks:{};
+        const sourceMax=maxMarks[match?.name||label]??maxMarks[label]??fallbackMax;
         return {name:label,mark,max:sourceMax};
       });
       const halfTables=['<table class="half-year-grade-table"><tbody>'+
