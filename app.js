@@ -102,15 +102,18 @@
     const controllerName=String(r.controller_name??r.head_controller??r.exam_controller??r.chief_controller??r.committee_head??r['رئيس الكنترول']??r['اسم رئيس الكنترول']??r['رئيس لجنة الكنترول']??r['اسم رئيس لجنة الكنترول']??'').trim();
     const footerHtml='<p class="congrats-promotion">مع أطيب الأمنيات بدوام التقدم والنجاح</p><footer class="certificate-footer"><span class="principal-signature"><strong>مدير المدرسة</strong><span class="signature-name">'+esc(principalName||'')+'</span></span><span class="controller-signature"><strong>رئيس الكنترول</strong><span class="signature-name">'+esc(controllerName||'')+'</span></span></footer>';
     if(state.studentResultMode==='half_year'){
-      const halfGradeKey=examHeader(gradeText);\n      const isSecondGrade=/(?:الصف)?الثاني|^2$|^grade2$/.test(halfGradeKey);\n      const halfGradeLabel=isSecondGrade?'الثاني':'الأول';\n      const halfMeta=[['اسم الطالبة',r.full_name],['رقم الجلوس',seatNo],['الرقم القومي',r.national_id],['الديانة',r.religion],['الصف',halfGradeLabel],['التخصص',specialization]].filter(x=>x[1]!==null&&x[1]!==undefined&&String(x[1]).trim()!=='');
+      const halfGradeKey=examHeader(gradeText);
+      const isSecondGrade=/(?:الصف)?الثاني|^2$|^grade2$/.test(halfGradeKey);
+      const halfGradeLabel=isSecondGrade?'الثاني':'الأول';
+      const serialNo=[r.serial,r.serial_number,r.sequence,r['مسلسل']].find(v=>v!==null&&v!==undefined&&String(v).trim()!=='')??'';
+      const halfMeta=[['مسلسل',serialNo],['رقم الجلوس',seatNo],['اسم الطالبة',r.full_name],['الرقم القومي',r.national_id],['الديانة',r.religion],['الصف',halfGradeLabel],['التخصص',specialization]].filter(x=>x[1]!==null&&x[1]!==undefined&&String(x[1]).trim()!=='');
       const halfMetaHtml=halfMeta.map(([k,v])=>'<div class="half-year-meta-item"><strong>'+esc(k)+':</strong><span>'+esc(v)+'</span></div>').join('');
       // First-semester certificate: exactly 15 columns, including the total.
       // Keep the agreed template order: 7 core subjects, 5 units, total, national education, religion.
       const halfExpected=isSecondGrade?[
         ['اللغة العربية',25],['اللغة الإنجليزية',20],['الرياضيات',25],['الفيزياء',20],
         ['الوحدة الأولى',null],['الوحدة الثانية',null],['الوحدة الثالثة',null],['الوحدة الرابعة',null],
-        ['الوحدة الخامسة',null],['الوحدة السادسة',null],['الوحدة السابعة',null],['الوحدة الثامنة',null],
-        ['الوحدة التاسعة',null],['المجموع',100],['التربية القومية',10],['التربية الدينية',10]
+        ['الوحدة الخامسة',null],['المجموع',90],['المواطنة',10],['التربية الدينية',10]
       ]:[
         ['اللغة العربية',25],['اللغة الإنجليزية',20],['الرياضيات',15],['الفيزياء',10],['الكيمياء',10],
         ['الدراسات الاجتماعية',10],['الحاسب الآلي',10],['الوحدة الأولى',null],['الوحدة الثانية',null],
