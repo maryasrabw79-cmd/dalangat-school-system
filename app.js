@@ -540,12 +540,12 @@
           XLSX.utils.book_append_sheet(wb,secondGradeWs,'الصف الثاني');
           uploadedCodeSheets.forEach((s,i)=>XLSX.utils.book_append_sheet(wb,s.ws,(s.name||('شيت '+(i+1))).slice(0,22)+' - برموز'));
           XLSX.writeFile(wb,'نتائج_نصف_العام_الصف_الأول_والثاني_'+year.replace('/','-')+'.xlsx');
-          codeFileNote=' تم تنزيل ملف Excel بثلاثة شيتات منفصلة: بيانات ودرجات الصف الأول، وبيانات ودرجات الصف الثاني، ورموز دخول الطالبات. كل رمز صالح لخمس مرات.';
+          codeFileNote=' تم تنزيل ملف Excel بنتائج الصفين، بالإضافة إلى نسخة من كل شيت رفعته حضرتك بعد إضافة عمود رمز الدخول فقط. كل رمز صالح لخمس مرات.';
         }else{
           XLSX.utils.book_append_sheet(wb,resultWs,'بيانات ودرجات الطالبات');
           uploadedCodeSheets.forEach((s,i)=>XLSX.utils.book_append_sheet(wb,s.ws,(s.name||('شيت '+(i+1))).slice(0,22)+' - برموز'));
           XLSX.writeFile(wb,'بيانات_ودرجات_ورموز_الطالبات_'+year.replace('/','-')+'.xlsx');
-          codeFileNote=' تم تنزيل ملف Excel يحتوي على بيانات الطالبات ودرجات المواد في الشيت الأول، ورموز الدخول في الشيت الثاني. كل رمز صالح لخمس مرات.';
+          codeFileNote=' تم تنزيل ملف Excel يحتوي على بيانات النتائج، بالإضافة إلى نسخة من الشيت المرفوع بعد إضافة عمود رمز الدخول فقط. كل رمز صالح لخمس مرات.';
         }
       }catch(codeErr){console.error('Issue student access codes error:',codeErr);codeFileNote=' تم حفظ النتائج، لكن تعذر إصدار ملف رموز الدخول: '+(codeErr?.message||String(codeErr))+'.';}
       msg.className='message '+(errors.length?'error':'success');msg.textContent='تم حفظ/تحديث '+saved+' نتيجة من ملف «'+file.name+'». '+(errors.length?'تم تجاوز '+errors.length+' صف غير صالح. أول الملاحظات: '+errors.slice(0,5).join(' | '):'لم توجد أخطاء في الصفوف.')+codeFileNote;
