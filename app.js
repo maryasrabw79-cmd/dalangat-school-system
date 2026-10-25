@@ -504,10 +504,31 @@
         const codeRows=issued.codes.map((r,i)=>({'مسلسل':i+1,'اسم الطالبة':r.full_name,'الرقم القومي':String(r.national_id),'رمز الدخول':String(r.access_code)}));
         const codesWs=XLSX.utils.json_to_sheet(codeRows);codesWs['!views']=[{rightToLeft:true}];codesWs['!cols']=[{wch:10},{wch:32},{wch:20},{wch:16}];
         const wb=XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb,resultWs,'بيانات ودرجات الطالبات');
-        XLSX.utils.book_append_sheet(wb,codesWs,'رموز دخول الطالبات');
-        XLSX.writeFile(wb,'بيانات_ودرجات_ورموز_الطالبات_'+year.replace('/','-')+'.xlsx');
-        codeFileNote=' تم تنزيل ملف Excel يحتوي على بيانات الطالبات ودرجات المواد في الشيت الأول، ورموز الدخول في الشيت الثاني. كل رمز صالح لخمس مرات.';
+        if(state.examMode==='half_year'){
+          const gradeOf=r=>{const g=examHeader(r.grade||'');return /الثاني|^2$|grade2|second/.test(g)?'الثاني':'الأول';};
+          const makeGradeSheet=(gradeLabel)=>{
+            const selected=resultRows.filter((row,i)=>gradeOf(rows[i])===gradeLabel);
+            const data=[resultHeaders,maxMarksExport,...selected];
+            const ws=XLSX.utils.aoa_to_sheet(data);
+            ws['!views']=[{rightToLeft:true}];
+            ws['!cols']=resultHeaders.map((h,i)=>({wch:i===0?20:i===1?30:i===2?14:i>=6&&i<6+subjectHeaders.length?16:18}));
+            ws['!autofilter']={ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:Math.max(1,data.length-1),c:resultHeaders.length-1}})};
+            ws['!freeze']={xSplit:2,ySplit:2};
+            return ws;
+          };
+          const firstGradeWs=makeGradeSheet('الأول');
+          const secondGradeWs=makeGradeSheet('الثاني');
+          XLSX.utils.book_append_sheet(wb,firstGradeWs,'الصف الأول');
+          XLSX.utils.book_append_sheet(wb,secondGradeWs,'الصف الثاني');
+          XLSX.utils.book_append_sheet(wb,codesWs,'رموز دخول الطالبات');
+          XLSX.writeFile(wb,'نتائج_نصف_العام_الصف_الأول_والثاني_'+year.replace('/','-')+'.xlsx');
+          codeFileNote=' تم تنزيل ملف Excel بثلاثة شيتات منفصلة: بيانات ودرجات الصف الأول، وبيانات ودرجات الصف الثاني، ورموز دخول الطالبات. كل رمز صالح لخمس مرات.';
+        }else{
+          XLSX.utils.book_append_sheet(wb,resultWs,'بيانات ودرجات الطالبات');
+          XLSX.utils.book_append_sheet(wb,codesWs,'رموز دخول الطالبات');
+          XLSX.writeFile(wb,'بيانات_ودرجات_ورموز_الطالبات_'+year.replace('/','-')+'.xlsx');
+          codeFileNote=' تم تنزيل ملف Excel يحتوي على بيانات الطالبات ودرجات المواد في الشيت الأول، ورموز الدخول في الشيت الثاني. كل رمز صالح لخمس مرات.';
+        }
       }catch(codeErr){console.error('Issue student access codes error:',codeErr);codeFileNote=' تم حفظ النتائج، لكن تعذر إصدار ملف رموز الدخول: '+(codeErr?.message||String(codeErr))+'.';}
       msg.className='message '+(errors.length?'error':'success');msg.textContent='تم حفظ/تحديث '+saved+' نتيجة من ملف «'+file.name+'». '+(errors.length?'تم تجاوز '+errors.length+' صف غير صالح. أول الملاحظات: '+errors.slice(0,5).join(' | '):'لم توجد أخطاء في الصفوف.')+codeFileNote;
     }catch(err){msg.className='message error';msg.textContent='تعذر استيراد الشيت: '+(err?.message||String(err));}
