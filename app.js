@@ -420,16 +420,26 @@
       if(headerRow<0)throw new Error('لم أتمكن من تحديد عمود الرقم القومي وعمود اسم الطالبة. تأكد أن الشيت يحتوي على أرقام قومية صحيحة وأسماء طالبات في صفوف البيانات.');
       const gradeI=examField(headers,['الصف','الصف الدراسي','المرحلة','grade','year']),sectionI=examField(headers,['الفصل','الشعبة','section','class']),specI=examField(headers,['التخصص','الشعبة التخصصية','specialization','specialty']),seatI=examField(headers,['رقم الجلوس','رقم جلوس','جلوس','seat number','seat_no','seat_number']),religionI=examField(headers,['الديانة','ديانة الطالبة','ديانة','religion']),totalI=examField(headers,['مجموع الطالبة','مجموع الطالبه','مجموع الطالب','درجة الطالبة','المجموع المحصل','المجموع الكلي','المجموع الكلى','total score','total_score','total','المجموع']),maxI=examField(headers,['الدرجة الكلية','الدرجة الكلية للطالبة','النهاية العظمى','إجمالي الدرجة النهائية','الدرجة النهائية','المجموع النهائي','max total','max_total','maximum','maximum total','total maximum']),principalI=examField(headers,['مدير المدرسة','اسم المدير','اسم مدير المدرسة','principal name','principal_name','school principal']),controllerI=examField(headers,['رئيس الكنترول','اسم رئيس الكنترول','رئيس لجنة الكنترول','اسم رئيس لجنة الكنترول','controller name','controller_name','head controller']),pctI=examField(headers,['النسبة','النسبة المئوية','percentage','percent']),statusI=examField(headers,['النتيجة','حالة النتيجة','الحالة العامة','حالة الطالب','حالة الطالبة','result','result status','result_status']),failedI=examField(headers,['مواد الدور الثاني','مواد الرسوب','مواد التخلف','failed subjects','subjects failed']);
       const serialI=examField(headers,['مسلسل','م','م.','تسلسل','serial','serial number']),reserved=new Set([idI,nameI,gradeI,sectionI,specI,seatI,religionI,totalI,maxI,principalI,controllerI,pctI,statusI,failedI,serialI].filter(i=>i>=0)),subjectHeaders=headers.map((h,i)=>({h,i})).filter(x=>x.h&&!reserved.has(x.i)),rows=[],errors=[],seen=new Set();
-      // التقط صف النهاية العظمى إذا كان موضوعًا مباشرة أسفل رؤوس الأعمدة.
-      let maxMarksRow=null,dataStart=headerRow+1;
-      const firstData=grid[dataStart]||[];
-      const firstHasIdentity=!!examId(firstData[idI])||!!examCell(firstData,nameI);
-      const firstNumericSubjects=subjectHeaders.map(col=>({name:col.h,raw:examCell(firstData,col.i)})).filter(x=>x.raw!==''&&Number.isFinite(Number(x.raw.replace(/,/g,''))));
-      if(!firstHasIdentity&&firstNumericSubjects.length){
-        maxMarksRow={};firstNumericSubjects.forEach(x=>maxMarksRow[x.name]=Number(x.raw.replace(/,/g,'')));
-        dataStart++;
+      // التقط صف النهاية العظمى أينما ورد بعد العناوين؛ فقد يأتي بعد صفوف الطالبات.
+      let maxMarksRow=null,dataStart=headerRow+1,principalFromSheet='',controllerFromSheet='';
+      const maxMarksRowIndexes=new Set();
+      for(let ri=headerRow+1;ri<grid.length;ri++){
+        const cells=grid[ri]||[];
+        const hasIdentity=!!examId(cells[idI])||!!examCell(cells,nameI);
+        const numericSubjects=subjectHeaders.map(col=>({name:col.h,raw:examCell(cells,col.i)}))
+          .filter(x=>x.raw!==''&&Number.isFinite(Number(x.raw.replace(/,/g,''))));
+        if(!hasIdentity&&numericSubjects.length>=2){
+          const candidate={};
+          numericSubjects.forEach(x=>candidate[x.name]=Number(x.raw.replace(/,/g,'')));
+          maxMarksRow=candidate;
+          maxMarksRowIndexes.add(ri);
+          const principal=examCell(cells,principalI),controller=examCell(cells,controllerI);
+          if(principal)principalFromSheet=principal;
+          if(controller)controllerFromSheet=controller;
+        }
       }
       for(let ri=dataStart;ri<grid.length;ri++){
+        if(maxMarksRowIndexes.has(ri))continue;
         const cells=grid[ri];if(!cells.some(v=>String(v??'').trim()))continue;
         const national_id=examId(cells[idI]),full_name=examCell(cells,nameI);
         if(!/^\d{14}$/.test(national_id)){errors.push('الصف '+(ri+1)+': الرقم القومي ليس 14 رقمًا.');continue;}
@@ -442,7 +452,7 @@
         const total=totalRaw!==''&&Number.isFinite(Number(totalRaw.replace(/,/g,'')))?Number(totalRaw.replace(/,/g,'')):null;
         const explicitMax=maxRaw!==''&&Number.isFinite(Number(maxRaw.replace(/,/g,'')))?Number(maxRaw.replace(/,/g,'')):null;const subjectMaxSum=maxMarksRow?Object.entries(maxMarksRow).filter(([name])=>!/(?:التربية\s*القومية|التربية\s*الدينية|تربية\s*قومية|تربية\s*دينية)/.test(name)).reduce((sum,[,value])=>sum+(Number.isFinite(Number(value))?Number(value):0),0):null;const maxTotal=explicitMax!==null?explicitMax:(subjectMaxSum!==null&&subjectMaxSum>0?subjectMaxSum:null);
         const percentage=pctRaw!==''&&Number.isFinite(Number(pctRaw.replace(/[% ,]/g,'')))?Number(pctRaw.replace(/[% ,]/g,'')):null;
-        rows.push({national_id,full_name,grade,section:examCell(cells,sectionI)||null,specialization:examCell(cells,specI)||null,seat_number:examCell(cells,seatI)||null,academic_year:year,exam_round:round,subjects,subject_max_marks:maxMarksRow||null,failed_subjects:examCell(cells,failedI)||null,total,max_total:maxTotal,percentage,result_status:examCell(cells,statusI)||null,principal_name:examCell(cells,principalI)||null,controller_name:examCell(cells,controllerI)||null,source_file:file.name,imported_by:state.user.id});
+        rows.push({national_id,full_name,grade,section:examCell(cells,sectionI)||null,specialization:examCell(cells,specI)||null,seat_number:examCell(cells,seatI)||null,academic_year:year,exam_round:round,subjects,subject_max_marks:maxMarksRow||null,failed_subjects:examCell(cells,failedI)||null,total,max_total:maxTotal,percentage,result_status:examCell(cells,statusI)||null,principal_name:examCell(cells,principalI)||principalFromSheet||null,controller_name:examCell(cells,controllerI)||controllerFromSheet||null,source_file:file.name,imported_by:state.user.id});
       }
       if(!rows.length)throw new Error('لم توجد صفوف صالحة للحفظ. '+errors.slice(0,4).join(' '));
       let saved=0;for(let i=0;i<rows.length;i+=100){const {error}=await state.client.from('exam_results').upsert(rows.slice(i,i+100),{onConflict:'national_id,academic_year,exam_round,grade'});if(error)throw new Error('تعذر حفظ النتائج في قاعدة البيانات: '+error.message);saved+=Math.min(100,rows.length-i);}
