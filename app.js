@@ -458,8 +458,9 @@
     ws['!autofilter']={ref:'A1:L'+Math.max(1,rows.length)};
     ws['!freeze']={xSplit:0,ySplit:1};
     const wb=XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb,ws,'ملخص النتائج');
-    XLSX.writeFile(wb,'شيت_ملخص_النتائج_والتوقيعات.xlsx');
+    const halfYear = state.examMode === 'half_year';
+    XLSX.utils.book_append_sheet(wb,ws,halfYear?'نتيجة الصف الأول والثاني':'ملخص النتائج');
+    XLSX.writeFile(wb,halfYear?'نتيجة_الصف_الأول_والثاني.xlsx':'شيت_ملخص_النتائج_والتوقيعات.xlsx');
     say('#examImportMsg',students.length?'تم تنزيل الملخص بمواد الدور الثاني للطالبات المستحقات فقط.':'لا توجد طالبات مسجلات لهن مواد دور ثانٍ في نتائج الدور الأول لهذا العام.','success');
   }
   async function exportExamResults(){
