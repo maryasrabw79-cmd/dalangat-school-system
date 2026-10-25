@@ -437,7 +437,7 @@
     const wb=XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb,makeSheet('الأول'),'الصف الأول');
     XLSX.utils.book_append_sheet(wb,makeSheet('الثاني'),'الصف الثاني');
-    XLSX.writeFile(wb,'نموذج_نتائج_الامتحانات_الصف_الأول_والثاني.xlsx');
+    XLSX.writeFile(wb,state.examMode==='half_year'?'نتيجة_الصف_الأول_والثاني.xlsx':'نموذج_نتائج_الامتحانات_الصف_الأول_والثاني.xlsx');
   }
   async function downloadExamSummaryTemplate(){
     if(typeof XLSX==='undefined'){window.alert('مكتبة Excel غير متاحة.');return;}
