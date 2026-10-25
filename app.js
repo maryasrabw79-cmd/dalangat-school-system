@@ -16,7 +16,21 @@
   const say = (id,msg,type='') => { const el=$(id); if(el){el.textContent=msg;el.className='message '+type;} };
   const esc = (v) => String(v ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const humanRole = r => ({admin:'مدير النظام',manager:'إدارة المدرسة',principal:'مدير المدرسة',viewer:'عرض فقط',employee:'موظف',pending:'بانتظار موافقة المدير'})[r] || r;
+  function removeResultsSummaryButton(){
+    const removeMatchingButtons = () => {
+      document.querySelectorAll('button, a, [role="button"]').forEach(el => {
+        const label = (el.innerText || el.textContent || '').replace(/\\s+/g,' ').trim();
+        if (/شيت/.test(label) && /ملخص النتائج/.test(label) && !/مواد الدور الثاني/.test(label)) el.remove();
+      });
+    };
+    removeMatchingButtons();
+    if (!window.__removeResultsSummaryObserver) {
+      window.__removeResultsSummaryObserver = new MutationObserver(removeMatchingButtons);
+      window.__removeResultsSummaryObserver.observe(document.body, {childList:true,subtree:true});
+    }
+  }
   async function init(){
+    removeResultsSummaryButton();
     if(!window.supabase || !cfg.supabaseUrl || !cfg.supabaseAnonKey || cfg.supabaseUrl.includes('YOUR-PROJECT')){
       showLogin(); say('#loginMsg','إعدادات Supabase غير مكتملة. راجع ملف config.js.','error'); return;
     }
