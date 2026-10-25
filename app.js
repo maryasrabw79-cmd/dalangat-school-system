@@ -501,8 +501,26 @@
         resultWs['!cols']=resultHeaders.map((h,i)=>({wch:i===0?20:i===1?30:i===2?14:i>=6&&i<6+subjectHeaders.length?16:18}));
         resultWs['!autofilter']={ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:Math.max(1,resultRows.length+1),c:resultHeaders.length-1}})};
         resultWs['!freeze']={xSplit:2,ySplit:2};
-        const codeRows=issued.codes.map((r,i)=>({'مسلسل':i+1,'اسم الطالبة':r.full_name,'الرقم القومي':String(r.national_id),'رمز الدخول':String(r.access_code)}));
-        const codesWs=XLSX.utils.json_to_sheet(codeRows);codesWs['!views']=[{rightToLeft:true}];codesWs['!cols']=[{wch:10},{wch:32},{wch:20},{wch:16}];
+        // احتفظ بنسخة من كل شيت رفعه المستخدم كما هو، وأضف عمود رمز الدخول فقط.
+        const codeById=new Map(issued.codes.map(r=>[examId(r.national_id),String(r.access_code??'')]));
+        const uploadedCodeSheets=sheetGrids.map((item,si)=>{
+          const data=item.grid.map(row=>row.slice());
+          const hi=data.findIndex(row=>row.some(v=>/الرقم القومي|national.?id/i.test(String(v??'')))&&row.some(v=>/اسم الطالبة|اسم الطالب|full.?name|student.?name/i.test(String(v??''))));
+          if(hi<0)return null;
+          const hdr=data[hi].map(v=>String(v??'').trim());
+          const idCol=examField(hdr,['الرقم القومي','رقم قومي','الرقم القومى','رقم الطالبة القومي','الرقم القومي للطالبة','national_id','national id','nationalid','id number']);
+          if(idCol<0)return null;
+          const codeCol=hdr.length;
+          data[hi][codeCol]='رمز الدخول';
+          for(let ri=hi+1;ri<data.length;ri++){
+            const id=examId(data[ri]?.[idCol]);
+            if(id)data[ri][codeCol]=codeById.get(id)||'';
+          }
+          const ws=XLSX.utils.aoa_to_sheet(data);
+          ws['!views']=[{rightToLeft:true}];
+          ws['!cols']=[...(hdr.map(h=>({wch:Math.max(12,Math.min(30,String(h||'').length+5))})),{wch:16}];
+          return {name:item.name,ws};
+        }).filter(Boolean);
         const wb=XLSX.utils.book_new();
         if(state.examMode==='half_year'){
           const gradeOf=r=>{const g=examHeader(r.grade||'');return /الثاني|^2$|grade2|second/.test(g)?'الثاني':'الأول';};
@@ -520,12 +538,12 @@
           const secondGradeWs=makeGradeSheet('الثاني');
           XLSX.utils.book_append_sheet(wb,firstGradeWs,'الصف الأول');
           XLSX.utils.book_append_sheet(wb,secondGradeWs,'الصف الثاني');
-          XLSX.utils.book_append_sheet(wb,codesWs,'رموز دخول الطالبات');
+          uploadedCodeSheets.forEach((s,i)=>XLSX.utils.book_append_sheet(wb,s.ws,(s.name||('شيت '+(i+1))).slice(0,22)+' - برموز'));
           XLSX.writeFile(wb,'نتائج_نصف_العام_الصف_الأول_والثاني_'+year.replace('/','-')+'.xlsx');
           codeFileNote=' تم تنزيل ملف Excel بثلاثة شيتات منفصلة: بيانات ودرجات الصف الأول، وبيانات ودرجات الصف الثاني، ورموز دخول الطالبات. كل رمز صالح لخمس مرات.';
         }else{
           XLSX.utils.book_append_sheet(wb,resultWs,'بيانات ودرجات الطالبات');
-          XLSX.utils.book_append_sheet(wb,codesWs,'رموز دخول الطالبات');
+          uploadedCodeSheets.forEach((s,i)=>XLSX.utils.book_append_sheet(wb,s.ws,(s.name||('شيت '+(i+1))).slice(0,22)+' - برموز'));
           XLSX.writeFile(wb,'بيانات_ودرجات_ورموز_الطالبات_'+year.replace('/','-')+'.xlsx');
           codeFileNote=' تم تنزيل ملف Excel يحتوي على بيانات الطالبات ودرجات المواد في الشيت الأول، ورموز الدخول في الشيت الثاني. كل رمز صالح لخمس مرات.';
         }
