@@ -555,3 +555,27 @@ body:has(#supportView:not(.hidden)) .container{max-width:none;margin:0;padding:0
   #studentCertificateHost .half-year-certificate-bottom{margin-top:2mm!important;padding-top:2mm!important;}
   #studentCertificateHost .certificate-usage-note{display:none!important;}
 }
+
+
+/* Exact 15-column / 3-row horizontal grade table for the first-semester certificate only */
+#studentCertificateHost .half-year-certificate .half-year-grade-table{width:100%;table-layout:fixed;border-collapse:collapse;margin:8px 0 10px;}
+#studentCertificateHost .half-year-certificate .half-year-grade-table th,
+#studentCertificateHost .half-year-certificate .half-year-grade-table td{width:6.666%;box-sizing:border-box;border:1px solid #54728d;text-align:center;vertical-align:middle;padding:5px 2px;overflow-wrap:anywhere;word-break:normal;}
+#studentCertificateHost .half-year-certificate .half-year-grade-table .half-year-subject-names th{height:62px;background:#eaf1f8;color:#123b65;font-size:9px;line-height:1.35;font-weight:800;}
+#studentCertificateHost .half-year-certificate .half-year-grade-table .half-year-max-marks td{height:28px;background:#f8fbfe;font-size:11px;font-weight:700;}
+#studentCertificateHost .half-year-certificate .half-year-grade-table .half-year-student-marks td{height:34px;background:#fff;font-size:13px;font-weight:900;color:#123b65;}
+@media print{
+ @page{size:A4 landscape;margin:6mm;}
+ #studentCertificateHost .half-year-certificate-frame{padding:7mm 8mm!important;min-height:0!important;}
+ #studentCertificateHost .half-year-student-info,#studentCertificateHost .half-year-grades{margin-top:3mm!important;}
+ #studentCertificateHost .half-year-student-info h2,#studentCertificateHost .half-year-grades h2{font-size:9pt!important;padding:1mm 2mm!important;margin-bottom:1.5mm!important;}
+ #studentCertificateHost .half-year-meta-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:1.5mm 2mm!important;}
+ #studentCertificateHost .half-year-meta-item{padding:1mm 1.5mm!important;font-size:8pt!important;}
+ #studentCertificateHost .half-year-certificate .half-year-grade-table{margin:1.5mm 0 2mm!important;}
+ #studentCertificateHost .half-year-certificate .half-year-grade-table .half-year-subject-names th{height:15mm!important;font-size:6.5pt!important;line-height:1.2!important;padding:1mm .4mm!important;}
+ #studentCertificateHost .half-year-certificate .half-year-grade-table .half-year-max-marks td{height:7mm!important;font-size:7pt!important;padding:.5mm .3mm!important;}
+ #studentCertificateHost .half-year-certificate .half-year-grade-table .half-year-student-marks td{height:8mm!important;font-size:8pt!important;padding:.5mm .3mm!important;}
+ #studentCertificateHost .half-year-signatures{margin:4mm 2mm 1mm!important;padding-top:1mm!important;}
+ #studentCertificateHost .half-year-signatures strong,#studentCertificateHost .half-year-signatures span{font-size:9pt!important;}
+ #studentCertificateHost .half-year-certificate-bottom{margin-top:1mm!important;padding-top:1mm!important;font-size:8pt!important;}
+}
