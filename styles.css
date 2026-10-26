@@ -592,3 +592,8 @@ body:has(#supportView:not(.hidden)) .container{max-width:none;margin:0;padding:0
  #studentCertificateHost .half-year-certificate .half-year-grade-table td{width:6.133%!important;}
  #studentCertificateHost .half-year-certificate .half-year-grade-table .half-year-subject-names th:not(.half-year-row-label){height:17mm!important;font-size:6.2pt!important;line-height:1.15!important;padding:.7mm .3mm!important;white-space:normal!important;overflow-wrap:anywhere!important;}
 }
+
+/* Third-grade reports controls */
+.third-grade-report-buttons{display:flex;flex-wrap:wrap;gap:12px;margin:18px 0;}
+.third-grade-report-buttons button{min-width:160px;flex:1 1 160px;}
+#thirdGradeSourceFile{max-width:100%;}
