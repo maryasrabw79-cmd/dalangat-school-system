@@ -779,7 +779,7 @@
     if(employeeMode&&sec.table==='staff') fields=sec.fields.filter(f=>f[0]!=='national_id');
     if(employeeMode&&sec.table==='staff_leaves') fields=sec.fields.filter(f=>!['staff_id','status'].includes(f[0]));
     if(employeeMode&&sec.table==='training_courses') fields=sec.fields.filter(f=>f[0]!=='staff_id');
-    const admissionsSettingsHtml = sec.table==='students' && admin() ? `<section class="panel admissions-settings-panel" style="margin-bottom:16px;padding:16px;border:1px solid #cbd5e1;border-radius:12px"><h3 style="margin-top:0">إعدادات توزيع الطالبات — قابلة للتغيير</h3><p>غيّر الأعداد حسب العام الدراسي، ثم احفظ الإعدادات. ستظل محفوظة في المنظومة ويمكن تعديلها لاحقًا.</p><div class="form-grid"><label>العام الدراسي للإعدادات<select id="distAcademicYear"><option>2025/2026</option><option selected>2026/2027</option><option>2027/2028</option><option>2028/2029</option><option>2029/2030</option></select></label><label>سعة فني تكنولوجيا الحاسبات<input id="distComputerCapacity" type="number" min="0" step="1" value="0" required></label><label>سعة فني الأجهزة الإلكترونية<input id="distElectronicsCapacity" type="number" min="0" step="1" value="0" required></label><label>سعة فني الملابس الجاهزة<input id="distGarmentsCapacity" type="number" min="0" step="1" value="0" required></label><label>الحد الأقصى لطالبات الفصل<input id="distClassSize" type="number" min="1" max="100" step="1" value="35" required></label></div><div class="form-actions"><button id="saveAdmissionsSettings" type="button">حفظ شروط التوزيع</button><button id="exportAdmissionsStudents" type="button" class="secondary">استخراج شيت بيانات الطالبات كاملة</button><button id="exportAdmissionsClasses" type="button" class="secondary">استخراج قوائم الفصول بعد التوزيع</button><button id="exportAdmission41" type="button" class="secondary">استخراج كشف ٤١</button></div><div id="admissionsSettingsMsg" class="message" aria-live="polite"></div></section>` : '';
+    const admissionsSettingsHtml = sec.table==='students' && admin() ? `<section class="panel admissions-settings-panel" style="margin-bottom:16px;padding:16px;border:1px solid #cbd5e1;border-radius:12px"><h3 style="margin-top:0">إعدادات توزيع الطالبات — قابلة للتغيير</h3><p>غيّر الأعداد حسب العام الدراسي، ثم احفظ الإعدادات. ستظل محفوظة في المنظومة ويمكن تعديلها لاحقًا.</p><div class="form-grid"><label>العام الدراسي للإعدادات<select id="distAcademicYear"><option>2025/2026</option><option selected>2026/2027</option><option>2027/2028</option><option>2028/2029</option><option>2029/2030</option></select></label><label>سعة فني تكنولوجيا الحاسبات<input id="distComputerCapacity" type="number" min="0" step="1" value="0" required></label><label>سعة فني الأجهزة الإلكترونية<input id="distElectronicsCapacity" type="number" min="0" step="1" value="0" required></label><label>سعة فني الملابس الجاهزة<input id="distGarmentsCapacity" type="number" min="0" step="1" value="0" required></label><label>الحد الأقصى لطالبات الفصل<input id="distClassSize" type="number" min="1" max="100" step="1" value="35" required></label></div><div class="form-actions"><button id="saveAdmissionsSettings" type="button">حفظ شروط التوزيع</button><button id="exportAdmissionsStudents" type="button" class="secondary">استخراج شيت بيانات الطالبات كاملة</button><button id="exportAdmissionsClasses" type="button" class="secondary">استخراج قوائم الفصول بعد التوزيع</button><button id="exportAdmission41" type="button" class="secondary">استخراج كشف ٤١</button></div><div id="admissionsSettingsMsg" class="message" aria-live="polite"></div><div class="admissions-bulk-import" style="margin-top:16px;padding-top:14px;border-top:1px solid #cbd5e1"><h4 style="margin:0 0 8px">إدخال بيانات الطالبات من ملف Excel</h4><p>ارفع شيتًا يحتوي على صف عناوين ثم بيانات الطالبات. يمكن أن تكون الأعمدة بالعربية أو بأسماء الحقول الإنجليزية، وبأي ترتيب.</p><label for="admissionsExcelFile">اختيار ملف Excel</label><input id="admissionsExcelFile" type="file" accept=".xlsx,.xls,.csv"><div class="form-actions"><button id="previewAdmissionsExcel" type="button" class="secondary">مراجعة الشيت</button><button id="importAdmissionsExcel" type="button" disabled>استيراد الطالبات إلى المنظومة</button></div><div id="admissionsExcelPreview" class="message" aria-live="polite"></div></div></section>` : '';
     host.innerHTML=`${admissionsSettingsHtml}<form id="recordForm" class="form-grid">${fields.map(fieldHTML).join('')}<div class="form-actions"><button type="submit">${employeeMode&&sec.table==='staff'?'حفظ بياناتي':'حفظ'}</button></div></form>`;
     if(sec.table==='students' && admin()) setupAdmissionsSettings();
     if(sec.table==='students'){
@@ -820,6 +820,8 @@
     $('#exportAdmissionsStudents')?.addEventListener('click',exportAdmissionsStudents);
     $('#exportAdmissionsClasses')?.addEventListener('click',exportAdmissionsClassLists);
     $('#exportAdmission41')?.addEventListener('click',()=>window.alert('زر كشف ٤١ جاهز. أرسل تصميم الكشف والبيانات المطلوبة لأربطه بالتنسيق الصحيح.'));
+    $('#previewAdmissionsExcel')?.addEventListener('click',previewAdmissionsExcelFile);
+    $('#importAdmissionsExcel')?.addEventListener('click',importAdmissionsExcelFile);
     save.addEventListener('click',async()=>{
       const values=[computer.value,electronics.value,garments.value,classSize.value].map(Number);
       if(values.some(v=>!Number.isInteger(v)||v<0)||values[3]<1||values[3]>100){say('#admissionsSettingsMsg','أدخل أعدادًا صحيحة غير سالبة، واجعل سعة الفصل من 1 إلى 100.','error');return;}
@@ -834,6 +836,115 @@
       finally{save.disabled=false;save.textContent='حفظ شروط التوزيع';}
     });
     await load();
+  }
+
+  const admissionsHeaderAliases={
+    full_name:['اسم الطالبة بالكامل','اسم الطالبة','اسم الطالبه','الاسم بالكامل','اسم الطالب','الاسم','full_name','student_name','name'],
+    national_id:['الرقم القومي','الرقم القومى','الرقم القومي للطالبة','رقم قومي','national_id','nationalid','national_number'],
+    father_name:['اسم الأب','اسم الاب','father_name','father_name'],
+    birth_date:['تاريخ الميلاد','birth_date','birthdate'],
+    academic_year:['العام الدراسي','العام الدراسى','السنة الدراسية','academic_year','school_year'],
+    age_at_october:['السن في أول أكتوبر','السن فى اول اكتوبر','السن','age_at_october','age'],
+    total_score:['المجموع','المجموع الكلي','المجموع الكلى','مجموع الدرجات','total_score','total','score'],
+    preparatory_school:['المدرسة الإعدادية','المدرسة الاعدادية','اسم المدرسة الإعدادية','المدرسة','preparatory_school'],
+    guardian_job:['وظيفة ولي الأمر','وظيفة ولى الأمر','وظيفة ولي الامر','وظيفة الأب','guardian_job'],
+    guardian_phone:['تليفون ولي الأمر','تليفون ولى الأمر','رقم تليفون ولي الأمر','رقم الهاتف','رقم التليفون','guardian_phone','phone'],
+    address:['العنوان','عنوان الطالبة','address'],
+    specialization:['التخصص','الشعبة','specialization'],
+    section:['الفصل','الفصل الدراسي','section'],
+    grade:['الصف','الصف الدراسي','grade'],
+    enrollment_status:['حالة القيد','الحالة','enrollment_status']
+  };
+  function admissionsNormalizeHeader(value){return String(value??'').trim().toLowerCase().replace(/[ـًٌٍَُِّْٰ]/g,'').replace(/[\\s_\\-().:]/g,'');}
+  function admissionsCell(row,aliases){
+    const keys=Object.keys(row||{}),wanted=new Set(aliases.map(admissionsNormalizeHeader));
+    const key=keys.find(k=>wanted.has(admissionsNormalizeHeader(k)));
+    return key===undefined?'':row[key];
+  }
+  function admissionsPrepareImportRow(row,year){
+    const get=k=>admissionsCell(row,admissionsHeaderAliases[k]);
+    const data={};
+    for(const key of Object.keys(admissionsHeaderAliases)){const value=get(key);if(value!==''&&value!==null&&value!==undefined)data[key]=String(value).trim();}
+    data.national_id=String(data.national_id||'').replace(/[\\s\\u200e\\u200f]/g,'');
+    data.academic_year=data.academic_year||year;
+    if(!data.full_name)return {error:'اسم الطالبة غير موجود'};
+    if(!/^\\d{14}$/.test(data.national_id))return {error:'الرقم القومي يجب أن يتكون من 14 رقمًا'};
+    const id=data.national_id,century=id[0]==='2'?1900:id[0]==='3'?2000:0;
+    const yy=Number(id.slice(1,3)),mm=Number(id.slice(3,5)),dd=Number(id.slice(5,7));
+    if(!century||mm<1||mm>12||dd<1||dd>31)return {error:'الرقم القومي لا يحتوي على تاريخ ميلاد صالح'};
+    const birth=new Date(century+yy,mm-1,dd);
+    if(birth.getFullYear()!==century+yy||birth.getMonth()!==mm-1||birth.getDate()!==dd)return {error:'تاريخ الميلاد في الرقم القومي غير صحيح'};
+    data.birth_date=(century+yy)+'-'+String(mm).padStart(2,'0')+'-'+String(dd).padStart(2,'0');
+    data.father_name=data.father_name||((data.full_name||'').trim().split(/\\s+/)[1]||'');
+    const startYear=Number(String(data.academic_year||year).split('/')[0]),target=new Date(startYear,9,1);
+    let months=(target.getFullYear()-birth.getFullYear())*12+target.getMonth()-birth.getMonth();if(target.getDate()<birth.getDate())months--;
+    data.age_at_october=months>=0?Math.floor(months/12)+' سنة و'+(months%12)+' شهر':'تاريخ الميلاد بعد أول أكتوبر';
+    if(data.total_score===undefined||data.total_score===''||!Number.isFinite(Number(String(data.total_score).replace(/,/g,''))))return {error:'المجموع غير موجود أو غير صحيح'};
+    data.total_score=Number(String(data.total_score).replace(/,/g,''));
+    if(!data.preparatory_school)return {error:'المدرسة الإعدادية غير موجودة'};
+    if(!data.guardian_job)return {error:'وظيفة ولي الأمر غير موجودة'};
+    if(!data.guardian_phone)return {error:'تليفون ولي الأمر غير موجود'};
+    if(!data.address)return {error:'العنوان غير موجود'};
+    data.student_code='ADM-'+id;data.grade=data.grade||'الأول';data.specialization=data.specialization||'غير موزعة';data.section=data.section||'غير موزع';data.enrollment_status=data.enrollment_status||'مقيدة';
+    return {data};
+  }
+  async function previewAdmissionsExcelFile(){
+    const input=$('#admissionsExcelFile'),preview=$('#admissionsExcelPreview'),importBtn=$('#importAdmissionsExcel');
+    if(!input?.files?.length){say('#admissionsExcelPreview','اختر ملف Excel أولًا.','error');return;}
+    if(typeof XLSX==='undefined'){say('#admissionsExcelPreview','مكتبة قراءة Excel غير متاحة. حدّث الصفحة وحاول مرة أخرى.','error');return;}
+    const btn=$('#previewAdmissionsExcel');btn.disabled=true;btn.textContent='جارٍ فحص الشيت...';importBtn.disabled=true;
+    try{
+      const file=input.files[0],book=XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:false});
+      const sheet=book.Sheets[book.SheetNames[0]];
+      const raw=XLSX.utils.sheet_to_json(sheet,{defval:'',raw:false});
+      if(!raw.length)throw new Error('الملف لا يحتوي على صفوف بيانات بعد صف العناوين.');
+      const year=$('#distAcademicYear')?.value||'2026/2027',valid=[],errors=[],seen=new Set();
+      raw.forEach((r,i)=>{
+        if(Object.values(r).every(v=>String(v??'').trim()===''))return;
+        const result=admissionsPrepareImportRow(r,year);
+        if(result.error){errors.push({row:i+2,error:result.error});return;}
+        const key=result.data.academic_year+'|'+result.data.national_id;
+        if(seen.has(key)){errors.push({row:i+2,error:'رقم قومي مكرر داخل الملف لنفس العام الدراسي'});return;}
+        seen.add(key);valid.push(result.data);
+      });
+      if(!valid.length)throw new Error('لم توجد صفوف صالحة للاستيراد. راجع عناوين الأعمدة والبيانات المطلوبة.');
+      state.pendingAdmissionsImport={fileName:file.name,rows:valid,errors,year};
+      const errorHtml=errors.length?'<details style="margin-top:8px"><summary>صفوف تحتاج إلى مراجعة ('+errors.length+')</summary><ul>'+errors.slice(0,30).map(e=>'<li>الصف '+e.row+': '+esc(e.error)+'</li>').join('')+(errors.length>30?'<li>وهناك أخطاء أخرى...</li>':'')+'</ul></details>':'';
+      preview.innerHTML='<p>الملف: <strong>'+esc(file.name)+'</strong></p><p>صفوف صالحة للاستيراد: <strong>'+valid.length+'</strong></p><p>صفوف مستبعدة بسبب أخطاء: <strong>'+errors.length+'</strong></p><p>العام الدراسي الافتراضي للصفوف التي لا تحتوي على عام: '+esc(year)+'</p>'+errorHtml;
+      importBtn.disabled=false;say('#admissionsSettingsMsg','تمت مراجعة الملف. لم تُحفظ البيانات بعد؛ اضغط الاستيراد بعد التأكد.','success');
+    }catch(err){state.pendingAdmissionsImport=null;say('#admissionsExcelPreview','تعذر قراءة الملف: '+(err?.message||String(err)),'error');}
+    finally{btn.disabled=false;btn.textContent='مراجعة الشيت';}
+  }
+  async function importAdmissionsExcelFile(){
+    if(!admin())return;
+    const pending=state.pendingAdmissionsImport,btn=$('#importAdmissionsExcel');
+    if(!pending?.rows?.length){say('#admissionsExcelPreview','راجع ملف Excel أولًا.','error');return;}
+    if(!window.confirm('سيتم استيراد '+pending.rows.length+' طالبة للعام الدراسي المحدد، مع تخطي الأرقام القومية المسجلة مسبقًا في العام نفسه. هل تريد المتابعة؟'))return;
+    btn.disabled=true;btn.textContent='جارٍ الاستيراد...';
+    try{
+      const year=pending.year,allIds=[...new Set(pending.rows.filter(r=>r.academic_year===year).map(r=>r.national_id))],existing=new Set();
+      for(let i=0;i<allIds.length;i+=100){
+        const part=allIds.slice(i,i+100);
+        if(!part.length)continue;
+        const {data,error}=await state.client.from('students').select('national_id').eq('academic_year',year).in('national_id',part);
+        if(error)throw error;(data||[]).forEach(r=>existing.add(String(r.national_id)));
+      }
+      const fresh=pending.rows.filter(r=>!existing.has(r.national_id));
+      const skipped=pending.rows.length-fresh.length;
+      if(!fresh.length){say('#admissionsExcelPreview','لم تُضف بيانات جديدة؛ جميع الأرقام القومية موجودة بالفعل في العام الدراسي '+esc(year)+'.','error');return;}
+      let inserted=0;
+      for(let i=0;i<fresh.length;i+=100){
+        const batch=fresh.slice(i,i+100);
+        const {error}=await state.client.from('students').insert(batch);
+        if(error)throw new Error('تم حفظ '+inserted+' سجلًا قبل حدوث الخطأ: '+error.message);
+        inserted+=batch.length;
+      }
+      say('#admissionsExcelPreview','تم استيراد '+inserted+' طالبة بنجاح. تم تخطي '+skipped+' طالبة مسجلة مسبقًا. الصفوف المستبعدة في المراجعة: '+pending.errors.length+'.','success');
+      say('#admissionsSettingsMsg','اكتمل استيراد بيانات الطالبات من ملف Excel.','success');
+      state.pendingAdmissionsImport=null;btn.disabled=true;$('#admissionsExcelFile').value='';
+      await loadSection(state.section);await loadStats();
+    }catch(err){say('#admissionsExcelPreview','تعذر إكمال الاستيراد: '+(err?.message||String(err)),'error');}
+    finally{btn.disabled=!state.pendingAdmissionsImport?.rows?.length;btn.textContent='استيراد الطالبات إلى المنظومة';}
   }
 
   async function getAdmissionsExportRows(){
