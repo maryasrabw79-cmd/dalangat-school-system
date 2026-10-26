@@ -3,7 +3,7 @@
   const $ = (s) => document.querySelector(s);
   const $$ = (s) => document.querySelectorAll(s);
   const cfg = window.SCHOOL_DB_CONFIG || {};
-  const state = { client:null, user:null, profile:null, role:'viewer', section:'employees', pendingAction:null, examMode:'year_end', studentResultMode:'year_end', cache:{employees:[],students:[]}, rows:[], staffRecord:null, libraryBooks:[] };
+  const state = { client:null, user:null, profile:null, role:'viewer', section:'employees', pendingAction:null, examMode:'year_end', studentResultMode:'year_end', cache:{employees:[],students:[]}, rows:[], staffRecord:null, libraryBooks:[], profileLoadPromise:null };
   const sections = {
     employees:{title:'العاملون',table:'staff',desc:'سجل بيانات العاملين بالمدرسة.',fields:[['full_name','اسم الموظف','text',true],['employee_no','الكود','text'],['national_id','الرقم القومي','text'],['birth_date','تاريخ الميلاد','date'],['qualification','المؤهل','text'],['hire_date','تاريخ التعيين','date'],['work_start_date','تاريخ استلام العمل','date'],['specialization','التخصص','text'],['job_title','المسمى الوظيفي','text'],['grade','الدرجة','text'],['grade_date','تاريخ الدرجة','date'],['phone','رقم التليفون','tel'],['marital_status','الحالة الاجتماعية','select',false,['أعزب','متزوج','مطلق','أرمل']],['address','العنوان','textarea']],columns:[['full_name','اسم الموظف'],['employee_no','الكود'],['national_id','الرقم القومي'],['birth_date','تاريخ الميلاد'],['qualification','المؤهل'],['hire_date','تاريخ التعيين'],['work_start_date','تاريخ استلام العمل'],['specialization','التخصص'],['job_title','المسمى الوظيفي'],['grade','الدرجة'],['grade_date','تاريخ الدرجة'],['phone','رقم التليفون'],['marital_status','الحالة الاجتماعية'],['address','العنوان']]},
     students:{title:'القبول والتسجيل',table:'students',desc:'إدارة بيانات الطالبات واستمارات الصف الثالث. يُستخرج تاريخ الميلاد والسن في أول أكتوبر من الرقم القومي، ويُستخرج اسم الأب مبدئيًا من الاسم.',fields:[['full_name','اسم الطالبة بالكامل','text',true],['national_id','الرقم القومي (14 رقمًا)','text',true],['father_name','اسم الأب (مستخرج من الاسم ويمكن مراجعته)','text'],['birth_date','تاريخ الميلاد (مستخرج من الرقم القومي)','date'],['academic_year','العام الدراسي','select',true,['2025/2026','2026/2027','2027/2028','2028/2029','2029/2030']],['age_at_october','السن في أول أكتوبر','text'],['total_score','المجموع','number',true],['preparatory_school','المدرسة الإعدادية','text',true],['guardian_job','وظيفة ولي الأمر','text',true],['guardian_phone','تليفون ولي الأمر','tel',true],['address','العنوان','textarea',true]],columns:[['full_name','اسم الطالبة'],['father_name','اسم الأب'],['national_id','الرقم القومي'],['birth_date','تاريخ الميلاد'],['age_at_october','السن في أول أكتوبر'],['total_score','المجموع'],['preparatory_school','المدرسة الإعدادية'],['guardian_job','وظيفة ولي الأمر'],['guardian_phone','تليفون ولي الأمر'],['address','العنوان'],['academic_year','العام الدراسي'],['specialization','التخصص'],['section','الفصل']]},
@@ -349,7 +349,7 @@
     try{
       const loginId=$('#loginNationalId').value.trim(); const email=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(loginId)?loginId.toLowerCase():(/^\d{14}$/.test(loginId)?staffLoginEmail(loginId):''); if(!email){say('#loginMsg','اكتب رقمًا قوميًّا من 14 رقمًا، أو البريد الإلكتروني المعتمد لمدير النظام.','error');return;} const {data,error}=await state.client.auth.signInWithPassword({email,password:$('#loginPassword').value});
       if(error){say('#loginMsg','تعذر الدخول: '+error.message,'error');return;}
-      if(data?.user){say('#loginMsg','تم التحقق من الحساب، جارٍ تحميل صلاحياته...','success');}
+      if(data?.user){say('#loginMsg','تم التحقق من الحساب، جارٍ تحميل صلاحياته...','success'); await loadProfile();}
       else{say('#loginMsg','لم يتم تسجيل الدخول. تأكد من الرقم القومي وكلمة المرور، أو فعّل حسابك أولًا.','error');}
     }catch(err){console.error('Login error:',err);say('#loginMsg','حدث خطأ أثناء محاولة الدخول: '+(err?.message||String(err)),'error');}
     finally{if(button){button.disabled=false;button.textContent='دخول';}}
@@ -394,7 +394,13 @@
       say('#sectionMsg','تعذر تسجيل الخروج من الخادم: '+(err?.message||String(err)),'error');
     }finally{if(button){button.disabled=false;button.textContent='تسجيل الخروج';}}
   }
-  async function loadProfile(){
+  function loadProfile(){
+    if(state.profileLoadPromise) return state.profileLoadPromise;
+    state.profileLoadPromise=loadProfileImpl().catch(err=>{console.error('Profile loading error:',err);showLogin();say('#loginMsg','تعذر تحميل صلاحيات الحساب: '+(err?.message||String(err)),'error');}).finally(()=>{state.profileLoadPromise=null;});
+    return state.profileLoadPromise;
+  }
+  async function loadProfileImpl(){
+    if(!state.user || !state.client) return;
     const {data,error}=await state.client.from('profiles').select('*').eq('id',state.user.id).maybeSingle();
     if(error){ showLogin();say('#loginMsg','تعذر قراءة صلاحيات الحساب: '+error.message,'error');return; }
     if(!data){showLogin();say('#loginMsg','تم الدخول، لكن لا يوجد سجل لهذا الحساب في profiles. اطلب من مسؤول النظام ربط الحساب بملف وصلاحية.','error');return;}
