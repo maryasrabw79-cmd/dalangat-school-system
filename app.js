@@ -272,7 +272,7 @@
   function deriveThirdGradeStudent(nationalId,fullName,formYear){
     const id=normalizeDigits(nationalId).trim();
     let birthDate='',governorate='';
-    if(/^\\d{14}$/.test(id)){
+    if(/^\d{14}$/.test(id)){
       const century=id[0]==='2'?1900:id[0]==='3'?2000:0;
       const year=century+Number(id.slice(1,3)),month=Number(id.slice(3,5)),day=Number(id.slice(5,7));
       const date=new Date(year,month-1,day);
@@ -296,7 +296,7 @@
         ageYears=years;ageMonths=months;ageDays=days;
       }
     }
-    const parts=String(fullName||'').trim().split(/\\s+/).filter(Boolean);
+    const parts=String(fullName||'').trim().split(/\s+/).filter(Boolean);
     const fatherName=parts.length>=2?parts.slice(1).join(' '):'';
     const [birthYear,birthMonth,birthDay]=birthDate?birthDate.split('-'):[ '', '', '' ];
     return {birthDate,birthYear,birthMonth,birthDay,governorate,ageYears,ageMonths,ageDays,fatherName};
