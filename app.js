@@ -779,7 +779,9 @@
     if(employeeMode&&sec.table==='staff') fields=sec.fields.filter(f=>f[0]!=='national_id');
     if(employeeMode&&sec.table==='staff_leaves') fields=sec.fields.filter(f=>!['staff_id','status'].includes(f[0]));
     if(employeeMode&&sec.table==='training_courses') fields=sec.fields.filter(f=>f[0]!=='staff_id');
-    host.innerHTML=`<form id="recordForm" class="form-grid">${fields.map(fieldHTML).join('')}<div class="form-actions"><button type="submit">${employeeMode&&sec.table==='staff'?'حفظ بياناتي':'حفظ'}</button></div></form>`;
+    const admissionsSettingsHtml = sec.table==='students' && admin() ? `<section class="panel admissions-settings-panel" style="margin-bottom:16px;padding:16px;border:1px solid #cbd5e1;border-radius:12px"><h3 style="margin-top:0">إعدادات توزيع الطالبات — قابلة للتغيير</h3><p>غيّر الأعداد حسب العام الدراسي، ثم احفظ الإعدادات. ستظل محفوظة في المنظومة ويمكن تعديلها لاحقًا.</p><div class="form-grid"><label>العام الدراسي للإعدادات<select id="distAcademicYear"><option>2025/2026</option><option selected>2026/2027</option><option>2027/2028</option><option>2028/2029</option><option>2029/2030</option></select></label><label>سعة فني تكنولوجيا الحاسبات<input id="distComputerCapacity" type="number" min="0" step="1" value="0" required></label><label>سعة فني الأجهزة الإلكترونية<input id="distElectronicsCapacity" type="number" min="0" step="1" value="0" required></label><label>سعة فني الملابس الجاهزة<input id="distGarmentsCapacity" type="number" min="0" step="1" value="0" required></label><label>الحد الأقصى لطالبات الفصل<input id="distClassSize" type="number" min="1" max="100" step="1" value="35" required></label></div><div class="form-actions"><button id="saveAdmissionsSettings" type="button">حفظ شروط التوزيع</button></div><div id="admissionsSettingsMsg" class="message" aria-live="polite"></div></section>` : '';
+    host.innerHTML=`${admissionsSettingsHtml}<form id="recordForm" class="form-grid">${fields.map(fieldHTML).join('')}<div class="form-actions"><button type="submit">${employeeMode&&sec.table==='staff'?'حفظ بياناتي':'حفظ'}</button></div></form>`;
+    if(sec.table==='students' && admin()) setupAdmissionsSettings();
     if(sec.table==='students'){
       const nameInput=$('[name="full_name"]'),idInput=$('[name="national_id"]'),fatherInput=$('[name="father_name"]'),birthInput=$('[name="birth_date"]'),yearInput=$('[name="academic_year"]'),ageInput=$('[name="age_at_october"]');
       if(yearInput)yearInput.value='2026/2027';
@@ -802,6 +804,33 @@
     for(const f of fields){const [name,,type,,extra]=f;if(type==='select'&&(extra==='staff'||extra==='students')){const list=await getOptions(extra);const select=$(`[name="${name}"]`);if(select)select.innerHTML='<option value="">اختر...</option>'+list.map(r=>`<option value="${esc(r.id)}">${esc(r.full_name)}</option>`).join('');}}
     if(employeeMode&&sec.table==='staff'&&state.staffRecord){for(const f of fields){const el=$(`[name="${f[0]}"]`);if(el)el.value=state.staffRecord[f[0]]??'';}}
     $('#recordForm').addEventListener('submit',e=>saveRecord(e,sec));
+  }
+
+  async function setupAdmissionsSettings(){
+    const year=$('#distAcademicYear'),computer=$('#distComputerCapacity'),electronics=$('#distElectronicsCapacity'),garments=$('#distGarmentsCapacity'),classSize=$('#distClassSize'),save=$('#saveAdmissionsSettings');
+    if(!year||!save)return;
+    const load=async()=>{
+      say('#admissionsSettingsMsg','جارٍ تحميل شروط التوزيع...');
+      const {data,error}=await state.client.from('admissions_distribution_settings').select('*').eq('academic_year',year.value).maybeSingle();
+      if(error){say('#admissionsSettingsMsg','تعذر تحميل الإعدادات: '+error.message,'error');return;}
+      computer.value=data?.computer_capacity??0;electronics.value=data?.electronics_capacity??0;garments.value=data?.garments_capacity??0;classSize.value=data?.class_size??35;
+      say('#admissionsSettingsMsg',data?'تم تحميل الإعدادات المحفوظة لهذا العام الدراسي.':'لا توجد إعدادات محفوظة لهذا العام؛ أدخل الأعداد المطلوبة ثم احفظها.');
+    };
+    year.addEventListener('change',load);
+    save.addEventListener('click',async()=>{
+      const values=[computer.value,electronics.value,garments.value,classSize.value].map(Number);
+      if(values.some(v=>!Number.isInteger(v)||v<0)||values[3]<1||values[3]>100){say('#admissionsSettingsMsg','أدخل أعدادًا صحيحة غير سالبة، واجعل سعة الفصل من 1 إلى 100.','error');return;}
+      if(values[0]+values[1]+values[2]===0){say('#admissionsSettingsMsg','يجب تحديد سعة تخصص واحد على الأقل.','error');return;}
+      save.disabled=true;save.textContent='جارٍ الحفظ...';
+      try{
+        const payload={academic_year:year.value,computer_capacity:values[0],electronics_capacity:values[1],garments_capacity:values[2],class_size:values[3],updated_by:state.user?.id||null,updated_at:new Date().toISOString()};
+        const {error}=await state.client.from('admissions_distribution_settings').upsert(payload,{onConflict:'academic_year'});
+        if(error)throw error;
+        say('#admissionsSettingsMsg','تم حفظ شروط التوزيع لهذا العام الدراسي. يمكنك تغييرها في أي وقت.','success');
+      }catch(err){say('#admissionsSettingsMsg','تعذر حفظ شروط التوزيع: '+(err?.message||String(err)),'error');}
+      finally{save.disabled=false;save.textContent='حفظ شروط التوزيع';}
+    });
+    await load();
   }
 
   async function renderNationalIdsForm(){
