@@ -597,3 +597,6 @@ body:has(#supportView:not(.hidden)) .container{max-width:none;margin:0;padding:0
 .third-grade-report-buttons{display:flex;flex-wrap:wrap;gap:12px;margin:18px 0;}
 .third-grade-report-buttons button{min-width:160px;flex:1 1 160px;}
 #thirdGradeSourceFile{max-width:100%;}
+
+/* كشف 12: إعدادات واجهة الإدارة */
+#thirdGradeFormsView .third-grade-report-buttons button{min-height:44px}
