@@ -38,6 +38,18 @@
     $('#loginForm').addEventListener('submit',login); $('#studentResultsLoginForm').addEventListener('submit',submitStudentExamLogin); $('#studentExamBackBtn').addEventListener('click',showHome); $('#studentCertificateBackBtn').addEventListener('click',showHome); $('#studentCertificatePrintBtn').addEventListener('click',()=>window.print()); $('#registerForm').addEventListener('submit',activateAccount); $('#showRegisterBtn').addEventListener('click',showRegister); $('#backToLoginBtn').addEventListener('click',showLogin); $('#logoutBtn').addEventListener('click',logout); $('#refreshBtn').addEventListener('click',()=>loadSection(state.section)); $('#homeBtn').addEventListener('click',showHome); $('#exportSelectedBtn').addEventListener('click',()=>exportReportsToExcel($('#exportSectionSelect').value));
     $('#libraryUploadForm').addEventListener('submit',uploadLibraryBook);
     $('#thirdGradeDownloadBtn').addEventListener('click',downloadThirdGradeFormsSheet);
+    $('#thirdGradeFormsView').addEventListener('click',(e)=>{
+      const report=e.target.closest('[data-third-grade-report]');
+      if(report){
+        say('#thirdGradeFormsMsg','تم اختيار «'+report.dataset.thirdGradeReport+'». سنضيف أعمدة هذا الكشف وطريقة إخراجه بعد تحديد محتواه.','success');
+        return;
+      }
+      if(e.target.closest('#thirdGradeSourceUploadBtn')){
+        const file=$('#thirdGradeSourceFile').files?.[0];
+        if(!file){say('#thirdGradeFormsMsg','اختر شيت البيانات الأساسي أولًا.','error');return;}
+        say('#thirdGradeFormsMsg','تم اختيار الملف «'+file.name+'». واجهة الرفع جاهزة؛ ربط الاستيراد وحفظ البيانات يحتاج مطابقة أعمدة الشيت مع حقول قاعدة البيانات حتى لا تتأثر بيانات المنظومة.','success');
+      }
+    });
     $('#libraryRefreshBtn').addEventListener('click',loadLibraryBooks);
     $('#librarySearch').addEventListener('input',renderLibraryBooks);
     $('#libraryGradeFilter').addEventListener('change',renderLibraryBooks);
