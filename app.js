@@ -779,7 +779,7 @@
     if(employeeMode&&sec.table==='staff') fields=sec.fields.filter(f=>f[0]!=='national_id');
     if(employeeMode&&sec.table==='staff_leaves') fields=sec.fields.filter(f=>!['staff_id','status'].includes(f[0]));
     if(employeeMode&&sec.table==='training_courses') fields=sec.fields.filter(f=>f[0]!=='staff_id');
-    const admissionsSettingsHtml = sec.table==='students' && admin() ? `<section class="panel admissions-settings-panel" style="margin-bottom:16px;padding:16px;border:1px solid #cbd5e1;border-radius:12px"><h3 style="margin-top:0">إعدادات توزيع الطالبات — قابلة للتغيير</h3><p>غيّر الأعداد حسب العام الدراسي، ثم احفظ الإعدادات. ستظل محفوظة في المنظومة ويمكن تعديلها لاحقًا.</p><div class="form-grid"><label>العام الدراسي للإعدادات<select id="distAcademicYear"><option>2025/2026</option><option selected>2026/2027</option><option>2027/2028</option><option>2028/2029</option><option>2029/2030</option></select></label><label>سعة فني تكنولوجيا الحاسبات<input id="distComputerCapacity" type="number" min="0" step="1" value="0" required></label><label>سعة فني الأجهزة الإلكترونية<input id="distElectronicsCapacity" type="number" min="0" step="1" value="0" required></label><label>سعة فني الملابس الجاهزة<input id="distGarmentsCapacity" type="number" min="0" step="1" value="0" required></label><label>الحد الأقصى لطالبات الفصل<input id="distClassSize" type="number" min="1" max="100" step="1" value="35" required></label></div><div class="form-actions"><button id="saveAdmissionsSettings" type="button">حفظ شروط التوزيع</button></div><div id="admissionsSettingsMsg" class="message" aria-live="polite"></div></section>` : '';
+    const admissionsSettingsHtml = sec.table==='students' && admin() ? `<section class="panel admissions-settings-panel" style="margin-bottom:16px;padding:16px;border:1px solid #cbd5e1;border-radius:12px"><h3 style="margin-top:0">إعدادات توزيع الطالبات — قابلة للتغيير</h3><p>غيّر الأعداد حسب العام الدراسي، ثم احفظ الإعدادات. ستظل محفوظة في المنظومة ويمكن تعديلها لاحقًا.</p><div class="form-grid"><label>العام الدراسي للإعدادات<select id="distAcademicYear"><option>2025/2026</option><option selected>2026/2027</option><option>2027/2028</option><option>2028/2029</option><option>2029/2030</option></select></label><label>سعة فني تكنولوجيا الحاسبات<input id="distComputerCapacity" type="number" min="0" step="1" value="0" required></label><label>سعة فني الأجهزة الإلكترونية<input id="distElectronicsCapacity" type="number" min="0" step="1" value="0" required></label><label>سعة فني الملابس الجاهزة<input id="distGarmentsCapacity" type="number" min="0" step="1" value="0" required></label><label>الحد الأقصى لطالبات الفصل<input id="distClassSize" type="number" min="1" max="100" step="1" value="35" required></label></div><div class="form-actions"><button id="saveAdmissionsSettings" type="button">حفظ شروط التوزيع</button><button id="exportAdmissionsStudents" type="button" class="secondary">استخراج شيت بيانات الطالبات كاملة</button><button id="exportAdmissionsClasses" type="button" class="secondary">استخراج قوائم الفصول بعد التوزيع</button><button id="exportAdmission41" type="button" class="secondary">استخراج كشف ٤١</button></div><div id="admissionsSettingsMsg" class="message" aria-live="polite"></div></section>` : '';
     host.innerHTML=`${admissionsSettingsHtml}<form id="recordForm" class="form-grid">${fields.map(fieldHTML).join('')}<div class="form-actions"><button type="submit">${employeeMode&&sec.table==='staff'?'حفظ بياناتي':'حفظ'}</button></div></form>`;
     if(sec.table==='students' && admin()) setupAdmissionsSettings();
     if(sec.table==='students'){
@@ -817,6 +817,9 @@
       say('#admissionsSettingsMsg',data?'تم تحميل الإعدادات المحفوظة لهذا العام الدراسي.':'لا توجد إعدادات محفوظة لهذا العام؛ أدخل الأعداد المطلوبة ثم احفظها.');
     };
     year.addEventListener('change',load);
+    $('#exportAdmissionsStudents')?.addEventListener('click',exportAdmissionsStudents);
+    $('#exportAdmissionsClasses')?.addEventListener('click',exportAdmissionsClassLists);
+    $('#exportAdmission41')?.addEventListener('click',()=>window.alert('زر كشف ٤١ جاهز. أرسل تصميم الكشف والبيانات المطلوبة لأربطه بالتنسيق الصحيح.'));
     save.addEventListener('click',async()=>{
       const values=[computer.value,electronics.value,garments.value,classSize.value].map(Number);
       if(values.some(v=>!Number.isInteger(v)||v<0)||values[3]<1||values[3]>100){say('#admissionsSettingsMsg','أدخل أعدادًا صحيحة غير سالبة، واجعل سعة الفصل من 1 إلى 100.','error');return;}
@@ -831,6 +834,51 @@
       finally{save.disabled=false;save.textContent='حفظ شروط التوزيع';}
     });
     await load();
+  }
+
+  async function getAdmissionsExportRows(){
+    const year=$('#distAcademicYear')?.value||'2026/2027';
+    const {data,error}=await state.client.from('students').select('*').eq('academic_year',year).order('total_score',{ascending:false}).limit(10000);
+    if(error)throw error;
+    return {year,rows:data||[]};
+  }
+  function admissionsExcelDownload(rows,sheetName,fileName){
+    if(typeof XLSX==='undefined')throw new Error('مكتبة Excel غير متاحة. حدّث الصفحة وحاول مرة أخرى.');
+    const ws=XLSX.utils.json_to_sheet(rows);ws['!views']=[{rightToLeft:true}];
+    const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,sheetName.slice(0,31));XLSX.writeFile(wb,fileName);
+  }
+  async function exportAdmissionsStudents(){
+    if(!admin())return;
+    const btn=$('#exportAdmissionsStudents');btn.disabled=true;
+    try{
+      const {year,rows}=await getAdmissionsExportRows();
+      if(!rows.length){say('#admissionsSettingsMsg','لا توجد بيانات طالبات للعام الدراسي المحدد.','error');return;}
+      const fields=[['serial','مسلسل'],['full_name','اسم الطالبة'],['father_name','اسم الأب'],['national_id','الرقم القومي'],['birth_date','تاريخ الميلاد'],['age_at_october','السن في أول أكتوبر'],['total_score','المجموع'],['preparatory_school','المدرسة الإعدادية'],['guardian_job','وظيفة ولي الأمر'],['guardian_phone','تليفون ولي الأمر'],['address','العنوان'],['academic_year','العام الدراسي'],['specialization','التخصص'],['section','الفصل'],['grade','الصف'],['student_code','كود الطالبة'],['enrollment_status','حالة القيد']];
+      const out=rows.map((r,i)=>Object.fromEntries(fields.map(([k,label])=>[label,k==='serial'?i+1:(r[k]??'')])));
+      admissionsExcelDownload(out,'بيانات الطالبات','بيانات_الطالبات_كاملة_'+year.replace('/','-')+'.xlsx');
+      say('#admissionsSettingsMsg','تم استخراج شيت بيانات الطالبات ('+rows.length+' طالبة).','success');
+    }catch(err){say('#admissionsSettingsMsg','تعذر استخراج البيانات: '+(err?.message||String(err)),'error');}
+    finally{btn.disabled=false;}
+  }
+  async function exportAdmissionsClassLists(){
+    if(!admin())return;
+    const btn=$('#exportAdmissionsClasses');btn.disabled=true;
+    try{
+      const {year,rows}=await getAdmissionsExportRows();
+      const assigned=rows.filter(r=>r.specialization&&r.specialization!=='غير موزعة'&&r.section&&r.section!=='غير موزع');
+      if(!assigned.length){say('#admissionsSettingsMsg','لا توجد طالبات موزعات لهذا العام الدراسي بعد.','error');return;}
+      const wb=XLSX.utils.book_new();
+      const groups=new Map();
+      assigned.sort((a,b)=>String(a.specialization).localeCompare(String(b.specialization),'ar')||String(a.section).localeCompare(String(b.section),'ar')||Number(b.total_score||0)-Number(a.total_score||0));
+      for(const r of assigned){const key=String(r.specialization)+' — '+String(r.section);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(r);}
+      for(const [key,list] of groups){
+        const out=list.map((r,i)=>({'مسلسل':i+1,'اسم الطالبة':r.full_name||'','الرقم القومي':r.national_id||'','المجموع':r.total_score??'','العام الدراسي':r.academic_year||year,'التخصص':r.specialization||'','الفصل':r.section||''}));
+        const ws=XLSX.utils.json_to_sheet(out);ws['!views']=[{rightToLeft:true}];XLSX.utils.book_append_sheet(wb,ws,key.slice(0,31));
+      }
+      XLSX.writeFile(wb,'قوائم_الفصول_بعد_التوزيع_'+year.replace('/','-')+'.xlsx');
+      say('#admissionsSettingsMsg','تم استخراج قوائم الفصول لعدد '+assigned.length+' طالبة في '+groups.size+' فصل.','success');
+    }catch(err){say('#admissionsSettingsMsg','تعذر استخراج قوائم الفصول: '+(err?.message||String(err)),'error');}
+    finally{btn.disabled=false;}
   }
 
   async function renderNationalIdsForm(){
