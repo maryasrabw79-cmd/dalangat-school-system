@@ -171,6 +171,7 @@
   async function openStudentResultHome(){showHome();}
   function showSupport(){ hideStudentResultViews(); $('#homeView').classList.add('hidden'); $('#loginView').classList.add('hidden'); $('#registerView').classList.add('hidden'); $('#appView').classList.add('hidden'); $('#supportView').classList.remove('hidden'); $('#logoutBtn').classList.toggle('hidden',!state.user); $('#homeBtn').classList.remove('hidden'); }
   async function openHomeSelection(key){
+    if($('#thirdGradeFormsView'))$('#thirdGradeFormsView').classList.add('hidden');
     if(key==='support'){showSupport();return;}
     if(key==='library'){
       if(!state.user||!state.profile){state.pendingAction='library';showLogin();return;}
@@ -227,7 +228,7 @@
       age=years>=0?years:'تاريخ الميلاد بعد أول مايو';
     }
     const parts=String(fullName||'').trim().split(/\\s+/).filter(Boolean);
-    const fatherName=parts.length>=3?parts.slice(1,3).join(' '):(parts[1]||'');
+    const fatherName=parts.length>=2?parts.slice(1).join(' '):'';
     return {birthDate,governorate,age,fatherName};
   }
   async function downloadThirdGradeFormsSheet(){
