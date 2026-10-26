@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#123b65"><title>منظومة مدرسة الدلنجات الصناعية بنات</title>
-  <link rel="stylesheet" href="styles.css?v=half-year-split-export-8">
+  <link rel="stylesheet" href="styles.css?v=third-grade-forms-export-1">
 </head>
 <body>
   <header class="topbar"><div><div class="eyebrow">مديرية التربية والتعليم بالبحيرة</div><div class="header-education-admin">إدارة الدلنجات التعليمية</div><h1>مدرسة الدلنجات الصناعية بنات</h1></div><div class="topbar-actions"><div class="admin-signature">إدارة أ / ياسر الدقاق</div><button id="homeBtn" class="secondary" type="button">الرئيسية</button><button id="logoutBtn" class="secondary hidden">تسجيل الخروج</button></div></header>
@@ -17,6 +17,7 @@
     <section id="appView" class="hidden">
       <div class="welcome panel"><div><h2 id="welcomeTitle">لوحة التحكم</h2><p id="roleLabel"></p></div><div class="stats" id="stats"></div></div>
       <nav id="tabs" class="tabs" aria-label="أقسام المنظومة"></nav>
+      <section id="thirdGradeFormsView" class="panel hidden"><div class="section-head"><div><h2>استمارات الصف الثالث</h2><p>تحميل ملف Excel ببيانات الطالبات، مع استخراج تاريخ الميلاد ومحافظة الميلاد والسن في أول مايو واسم الأب من البيانات المسجلة.</p></div></div><div class="export-controls"><label for="thirdGradeFormYear">عام الاستمارة<input id="thirdGradeFormYear" type="number" min="1900" max="2200" value="2026"></label><button id="thirdGradeDownloadBtn" type="button">تحميل شيت إكسل</button></div><div id="thirdGradeFormsMsg" class="message" aria-live="polite"></div></section>
       <section id="exportView" class="panel hidden"><h2>التصدير إلى Excel</h2><p>اختر القسم الذي تريد تصدير بياناته بعد تسجيل الدخول.</p><div class="export-controls"><label for="exportSectionSelect">القسم المطلوب تصديره<select id="exportSectionSelect"></select></label><button id="exportSelectedBtn" type="button">تصدير القسم المحدد إلى Excel</button></div><div id="exportMsg" class="message" aria-live="polite"></div></section>
       <section id="libraryView" class="panel hidden">
         <div class="section-head"><div><h2>المكتبة الإلكترونية</h2><p>تصفّح الكتب واقرأها داخل المنظومة.</p></div><button id="libraryRefreshBtn" class="secondary" type="button">تحديث الكتب</button></div>
@@ -42,5 +43,5 @@
   </main>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="config.js"></script><script src="app.js?v=restore-admissions-and-third-grade-forms-2"></script>
+  <script src="config.js"></script><script src="app.js?v=third-grade-forms-export-1"></script>
 </body></html>
