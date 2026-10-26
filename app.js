@@ -875,7 +875,7 @@
     const birth=new Date(century+yy,mm-1,dd);
     if(birth.getFullYear()!==century+yy||birth.getMonth()!==mm-1||birth.getDate()!==dd)return {error:'تاريخ الميلاد في الرقم القومي غير صحيح'};
     data.birth_date=(century+yy)+'-'+String(mm).padStart(2,'0')+'-'+String(dd).padStart(2,'0');
-    data.father_name=data.father_name||((data.full_name||'').trim().split(/\\s+/)[1]||'');
+    data.father_name=data.father_name||((data.full_name||'').trim().split(/\s+/)[1]||'');
     const startYear=Number(String(data.academic_year||year).split('/')[0]),target=new Date(startYear,9,1);
     let months=(target.getFullYear()-birth.getFullYear())*12+target.getMonth()-birth.getMonth();if(target.getDate()<birth.getDate())months--;
     data.age_at_october=months>=0?Math.floor(months/12)+' سنة و'+(months%12)+' شهر':'تاريخ الميلاد بعد أول أكتوبر';
