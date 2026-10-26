@@ -6,7 +6,7 @@
   const state = { client:null, user:null, profile:null, role:'viewer', section:'employees', pendingAction:null, examMode:'year_end', studentResultMode:'year_end', cache:{employees:[],students:[]}, rows:[], staffRecord:null, libraryBooks:[] };
   const sections = {
     employees:{title:'العاملون',table:'staff',desc:'سجل بيانات العاملين بالمدرسة.',fields:[['full_name','اسم الموظف','text',true],['employee_no','الكود','text'],['national_id','الرقم القومي','text'],['birth_date','تاريخ الميلاد','date'],['qualification','المؤهل','text'],['hire_date','تاريخ التعيين','date'],['work_start_date','تاريخ استلام العمل','date'],['specialization','التخصص','text'],['job_title','المسمى الوظيفي','text'],['grade','الدرجة','text'],['grade_date','تاريخ الدرجة','date'],['phone','رقم التليفون','tel'],['marital_status','الحالة الاجتماعية','select',false,['أعزب','متزوج','مطلق','أرمل']],['address','العنوان','textarea']],columns:[['full_name','اسم الموظف'],['employee_no','الكود'],['national_id','الرقم القومي'],['birth_date','تاريخ الميلاد'],['qualification','المؤهل'],['hire_date','تاريخ التعيين'],['work_start_date','تاريخ استلام العمل'],['specialization','التخصص'],['job_title','المسمى الوظيفي'],['grade','الدرجة'],['grade_date','تاريخ الدرجة'],['phone','رقم التليفون'],['marital_status','الحالة الاجتماعية'],['address','العنوان']]},
-    students:{title:'الطالبات',table:'students',desc:'سجل بيانات الطالبات وقيدهن.',fields:[['full_name','اسم الطالبة','text',true],['student_code','كود الطالبة','text',true],['grade','الصف الدراسي','select',true,['الأول','الثاني','الثالث']],['section','الفصل','text'],['specialization','التخصص','select',true,['فني تكنولوجيا الحاسبات','فني الأجهزة الإلكترونية','فني الملابس الجاهزة']],['enrollment_status','حالة القيد','select',true,['مقيدة','منقطعة','محولة','متخرجة']],['birth_date','تاريخ الميلاد','date'],['guardian_name','اسم ولي الأمر','text'],['guardian_phone','هاتف ولي الأمر','tel']],columns:[['full_name','اسم الطالبة'],['student_code','كود الطالبة'],['grade','الصف'],['section','الفصل'],['specialization','التخصص'],['enrollment_status','الحالة']]},
+    students:{title:'القبول والتسجيل',table:'students',desc:'تسجيل بيانات المتقدمات. يُستخرج تاريخ الميلاد والسن في أول أكتوبر من الرقم القومي، ويُستخرج اسم الأب مبدئيًا من الاسم.',fields:[['full_name','اسم الطالبة بالكامل','text',true],['national_id','الرقم القومي (14 رقمًا)','text',true],['father_name','اسم الأب (مستخرج من الاسم ويمكن مراجعته)','text'],['birth_date','تاريخ الميلاد (مستخرج من الرقم القومي)','date'],['academic_year','العام الدراسي','select',true,['2025/2026','2026/2027','2027/2028','2028/2029','2029/2030']],['age_at_october','السن في أول أكتوبر','text'],['total_score','المجموع','number',true],['preparatory_school','المدرسة الإعدادية','text',true],['guardian_job','وظيفة ولي الأمر','text',true],['guardian_phone','تليفون ولي الأمر','tel',true],['address','العنوان','textarea',true]],columns:[['full_name','اسم الطالبة'],['father_name','اسم الأب'],['national_id','الرقم القومي'],['birth_date','تاريخ الميلاد'],['age_at_october','السن في أول أكتوبر'],['total_score','المجموع'],['preparatory_school','المدرسة الإعدادية'],['guardian_job','وظيفة ولي الأمر'],['guardian_phone','تليفون ولي الأمر'],['address','العنوان'],['academic_year','العام الدراسي'],['specialization','التخصص'],['section','الفصل']]},
     attendance:{title:'الحضور والغياب',table:'attendance',desc:'تسجيل حضور الطالبات أو غيابهن.',fields:[['student_id','الطالبة','select',true,'students'],['attendance_date','التاريخ','date',true],['status','الحالة','select',true,['حضور','غياب','تأخير','إذن']],['notes','ملاحظات','textarea']],columns:[['student_name','الطالبة'],['attendance_date','التاريخ'],['status','الحالة'],['notes','ملاحظات']]},
     leaves:{title:'الإجازات',table:'staff_leaves',desc:'تسجيل ومتابعة إجازات العاملين.',fields:[['staff_id','العامل','select',true,'staff'],['leave_type','نوع الإجازة','select',true,['اعتيادية','عارضة','مرضية','بدون مرتب','أخرى']],['start_date','من تاريخ','date',true],['end_date','إلى تاريخ','date',true],['status','حالة الطلب','select',true,['قيد المراجعة','مقبولة','مرفوضة']],['notes','ملاحظات','textarea']],columns:[['staff_name','العامل'],['leave_type','نوع الإجازة'],['start_date','من'],['end_date','إلى'],['status','الحالة'],['notes','ملاحظات']]},
     training_courses:{title:'التدريب',table:'training_courses',desc:'إدارة الدورات التدريبية ومتابعتها.',fields:[['staff_id','العامل/المتدرب','select',true,'staff'],['course_name','اسم الدورة','text',true],['provider','الجهة المنظمة','text'],['start_date','تاريخ البداية','date'],['end_date','تاريخ النهاية','date'],['hours','عدد الساعات','number'],['certificate_no','رقم الشهادة','text'],['notes','ملاحظات','textarea']],columns:[['staff_name','العامل/المتدرب'],['course_name','الدورة'],['provider','الجهة المنظمة'],['start_date','البداية'],['end_date','النهاية'],['hours','الساعات']]},
@@ -780,6 +780,25 @@
     if(employeeMode&&sec.table==='staff_leaves') fields=sec.fields.filter(f=>!['staff_id','status'].includes(f[0]));
     if(employeeMode&&sec.table==='training_courses') fields=sec.fields.filter(f=>f[0]!=='staff_id');
     host.innerHTML=`<form id="recordForm" class="form-grid">${fields.map(fieldHTML).join('')}<div class="form-actions"><button type="submit">${employeeMode&&sec.table==='staff'?'حفظ بياناتي':'حفظ'}</button></div></form>`;
+    if(sec.table==='students'){
+      const nameInput=$('[name="full_name"]'),idInput=$('[name="national_id"]'),fatherInput=$('[name="father_name"]'),birthInput=$('[name="birth_date"]'),yearInput=$('[name="academic_year"]'),ageInput=$('[name="age_at_october"]');
+      if(yearInput)yearInput.value='2026/2027';
+      if(birthInput)birthInput.readOnly=true;if(ageInput)ageInput.readOnly=true;
+      const derive=()=>{
+        if(fatherInput){const parts=(nameInput?.value||'').trim().split(/\\s+/).filter(Boolean);fatherInput.value=parts.length>=2?parts[1]:'';}
+        const id=(idInput?.value||'').replace(/\\s/g,'');
+        let birth='';
+        if(/^\\d{14}$/.test(id)){
+          const century=id[0]==='2'?1900:id[0]==='3'?2000:0;
+          const yy=Number(id.slice(1,3)),mm=Number(id.slice(3,5)),dd=Number(id.slice(5,7));
+          if(century&&mm>=1&&mm<=12&&dd>=1&&dd<=31){const date=new Date(century+yy,mm-1,dd);if(date.getFullYear()===century+yy&&date.getMonth()===mm-1&&date.getDate()===dd)birth=date.getFullYear()+'-'+String(mm).padStart(2,'0')+'-'+String(dd).padStart(2,'0');}
+        }
+        if(birthInput)birthInput.value=birth;
+        const startYear=Number((yearInput?.value||'2026/2027').split('/')[0]);
+        if(ageInput){if(birth&&startYear){const b=new Date(birth+'T00:00:00'),target=new Date(startYear,9,1);let months=(target.getFullYear()-b.getFullYear())*12+target.getMonth()-b.getMonth();if(target.getDate()<b.getDate())months--;if(months>=0){ageInput.value=Math.floor(months/12)+' سنة و'+(months%12)+' شهر';}else ageInput.value='تاريخ الميلاد بعد أول أكتوبر';}else ageInput.value='';}
+      };
+      nameInput?.addEventListener('input',derive);idInput?.addEventListener('input',derive);yearInput?.addEventListener('change',derive);derive();
+    }
     for(const f of fields){const [name,,type,,extra]=f;if(type==='select'&&(extra==='staff'||extra==='students')){const list=await getOptions(extra);const select=$(`[name="${name}"]`);if(select)select.innerHTML='<option value="">اختر...</option>'+list.map(r=>`<option value="${esc(r.id)}">${esc(r.full_name)}</option>`).join('');}}
     if(employeeMode&&sec.table==='staff'&&state.staffRecord){for(const f of fields){const el=$(`[name="${f[0]}"]`);if(el)el.value=state.staffRecord[f[0]]??'';}}
     $('#recordForm').addEventListener('submit',e=>saveRecord(e,sec));
@@ -908,6 +927,20 @@
     e.preventDefault();say('#sectionMsg','جارٍ الحفظ...');
     const form=new FormData(e.currentTarget),employeeMode=!admin()&&state.role==='employee',data={};
     for(const f of sec.fields){const [name,,type]=f;if(employeeMode&&sec.table==='staff'&&name==='national_id')continue;if(employeeMode&&sec.table==='staff_leaves'&&name==='status')continue;const val=form.get(name);if(val!==null&&String(val).trim()!=='')data[name]=type==='number'?Number(val):String(val).trim();}
+    if(sec.table==='students'){
+      const id=String(data.national_id||'').trim();
+      if(!/^\\d{14}$/.test(id)){say('#sectionMsg','يجب إدخال رقم قومي صحيح مكوّن من 14 رقمًا.','error');return;}
+      const yy=Number(id.slice(1,3)),mm=Number(id.slice(3,5)),dd=Number(id.slice(5,7)),century=id[0]==='2'?1900:id[0]==='3'?2000:0;
+      if(!century||mm<1||mm>12||dd<1||dd>31){say('#sectionMsg','الرقم القومي لا يحتوي على تاريخ ميلاد صالح.','error');return;}
+      const d=new Date(century+yy,mm-1,dd);if(d.getFullYear()!==century+yy||d.getMonth()!==mm-1||d.getDate()!==dd){say('#sectionMsg','تاريخ الميلاد المستخرج من الرقم القومي غير صحيح.','error');return;}
+      data.student_code='ADM-'+id;data.grade='الأول';data.specialization='غير موزعة';data.section='غير موزع';data.enrollment_status='مقيدة';
+      data.father_name=data.father_name||((data.full_name||'').trim().split(/\\s+/)[1]||'');
+      data.birth_date=(century+yy)+'-'+String(mm).padStart(2,'0')+'-'+String(dd).padStart(2,'0');
+      const startYear=Number(String(data.academic_year||'2026/2027').split('/')[0]),birthDate=new Date(data.birth_date+'T00:00:00'),target=new Date(startYear,9,1);
+      let months=(target.getFullYear()-birthDate.getFullYear())*12+target.getMonth()-birthDate.getMonth();if(target.getDate()<birthDate.getDate())months--;
+      data.age_at_october=months>=0?Math.floor(months/12)+' سنة و'+(months%12)+' شهر':'تاريخ الميلاد بعد أول أكتوبر';
+      if(data.total_score===undefined||data.total_score===null||data.total_score===''){say('#sectionMsg','أدخل مجموع الطالبة.','error');return;}
+    }
     if(sec.table==='attendance'){delete data.student_name;delete data.student_number;}
     if(employeeMode){
       if(!state.staffRecord){say('#sectionMsg','لم يتم ربط حسابك بسجل العاملين.','error');return;}
