@@ -37,12 +37,14 @@
     state.client=window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey);
     $('#loginForm').addEventListener('submit',login); $('#studentResultsLoginForm').addEventListener('submit',submitStudentExamLogin); $('#studentExamBackBtn').addEventListener('click',showHome); $('#studentCertificateBackBtn').addEventListener('click',showHome); $('#studentCertificatePrintBtn').addEventListener('click',()=>window.print()); $('#registerForm').addEventListener('submit',activateAccount); $('#showRegisterBtn').addEventListener('click',showRegister); $('#backToLoginBtn').addEventListener('click',showLogin); $('#logoutBtn').addEventListener('click',logout); $('#refreshBtn').addEventListener('click',()=>loadSection(state.section)); $('#homeBtn').addEventListener('click',showHome); $('#exportSelectedBtn').addEventListener('click',()=>exportReportsToExcel($('#exportSectionSelect').value));
     $('#libraryUploadForm').addEventListener('submit',uploadLibraryBook);
+    $('#thirdGradeDownloadBtn').addEventListener('click',downloadThirdGradeFormsSheet);
     $('#libraryRefreshBtn').addEventListener('click',loadLibraryBooks);
     $('#librarySearch').addEventListener('input',renderLibraryBooks);
     $('#libraryGradeFilter').addEventListener('change',renderLibraryBooks);
     $('#libraryCloseReaderBtn').addEventListener('click',closeLibraryReader);
     $('#libraryBooksList').addEventListener('click',handleLibraryBookAction);
     $('#homeTabs').querySelectorAll('[data-home-section]').forEach(b=>{b.addEventListener('click',async(e)=>{e.preventDefault();const key=b.dataset.homeSection;try{await openHomeSelection(key);}catch(err){console.error('Home tile error ('+key+'):',err);window.alert('تعذر فتح القسم. حدّث الصفحة، وإذا استمرت المشكلة أرسل لي نص الخطأ: '+(err?.message||String(err)));}});});
+    $('#homeBtn').addEventListener('click',()=>{if($('#thirdGradeFormsView')&&!$('#thirdGradeFormsView').classList.contains('hidden'))$('#thirdGradeFormsView').classList.add('hidden');});
     state.client.auth.onAuthStateChange((_event,session)=>{ if(session?.user){ state.user=session.user; setTimeout(loadProfile,0); } else { state.user=null; state.profile=null; showLogin(); }});
     const {data:{session}}=await state.client.auth.getSession(); if(session?.user){state.user=session.user;await loadProfile();} else showHome();
   }
@@ -179,7 +181,7 @@
     if(key==='export'&&state.user&&!admin()){say('#sectionMsg','استخراج ملفات Excel متاح لمدير النظام فقط.','error');return;}
     if(key==='home'){showHome();return;}
     if(key==='logout'){if(state.user){await logout();}else{showHome();}return;}
-    if(key==='third_grade_forms')key='students';
+    if(key==='third_grade_forms'){await openThirdGradeForms();return;}
     const implemented=['employees','students','attendance','leaves','training_courses','staff_schedules','users','export'];
     if(!implemented.includes(key)){window.alert('هذا القسم ظاهر في الواجهة الجديدة، لكن وظيفته التفصيلية لم تُبرمج بعد.');return;}
     const action=key==='export'?'export':key;
@@ -193,6 +195,62 @@
     state.section=action;$('#homeView').classList.add('hidden');$('#loginView').classList.add('hidden');$('#appView').classList.remove('hidden');$('#logoutBtn').classList.remove('hidden');$('#exportView').classList.add('hidden');$('#dataView').classList.remove('hidden');renderTabs();await loadSection(action);
   }
 
+  async function openThirdGradeForms(){
+    if(!state.user||!state.profile){state.pendingAction='third_grade_forms';showLogin();return;}
+    if(!admin()){window.alert('استمارات الصف الثالث متاحة لمدير النظام فقط.');showHome();return;}
+    $('#homeView').classList.add('hidden');$('#loginView').classList.add('hidden');$('#registerView').classList.add('hidden');$('#appView').classList.remove('hidden');
+    $('#exportView').classList.add('hidden');$('#dataView').classList.add('hidden');$('#tabs').classList.add('hidden');$('#libraryView').classList.add('hidden');
+    $('#thirdGradeFormsView').classList.remove('hidden');$('#logoutBtn').classList.remove('hidden');$('#homeBtn').classList.remove('hidden');
+    say('#thirdGradeFormsMsg','');
+  }
+  function normalizeDigits(value){return String(value??'').replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/[۰-۹]/g,d=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));}
+  function deriveThirdGradeStudent(nationalId,fullName,formYear){
+    const id=normalizeDigits(nationalId).trim();
+    let birthDate='',governorate='';
+    if(/^\\d{14}$/.test(id)){
+      const century=id[0]==='2'?1900:id[0]==='3'?2000:0;
+      const year=century+Number(id.slice(1,3)),month=Number(id.slice(3,5)),day=Number(id.slice(5,7));
+      const date=new Date(year,month-1,day);
+      if(century&&date.getFullYear()===year&&date.getMonth()===month-1&&date.getDate()===day){
+        birthDate=year+'-'+String(month).padStart(2,'0')+'-'+String(day).padStart(2,'0');
+      }
+      const code=id.slice(7,9);
+      const governorates={'01':'القاهرة','02':'الإسكندرية','03':'بورسعيد','04':'السويس','11':'دمياط','12':'الدقهلية','13':'الشرقية','14':'القليوبية','15':'كفر الشيخ','16':'الغربية','17':'المنوفية','18':'البحيرة','19':'الإسماعيلية','21':'الجيزة','22':'بني سويف','23':'الفيوم','24':'المنيا','25':'أسيوط','26':'سوهاج','27':'قنا','28':'أسوان','29':'الأقصر','31':'البحر الأحمر','32':'الوادي الجديد','33':'مطروح','34':'شمال سيناء','35':'جنوب سيناء','88':'خارج الجمهورية'};
+      governorate=governorates[code]||'غير محددة';
+    }
+    const targetYear=Number(formYear);
+    let age='';
+    if(birthDate&&Number.isInteger(targetYear)&&targetYear>=1900&&targetYear<=2200){
+      const [y,m,d]=birthDate.split('-').map(Number);
+      let years=targetYear-y;
+      if(m>5||(m===5&&d>1))years--;
+      age=years>=0?years:'تاريخ الميلاد بعد أول مايو';
+    }
+    const parts=String(fullName||'').trim().split(/\\s+/).filter(Boolean);
+    const fatherName=parts.length>=3?parts.slice(1,3).join(' '):(parts[1]||'');
+    return {birthDate,governorate,age,fatherName};
+  }
+  async function downloadThirdGradeFormsSheet(){
+    if(!admin()){say('#thirdGradeFormsMsg','تنزيل الشيت متاح لمدير النظام فقط.','error');return;}
+    if(typeof XLSX==='undefined'){say('#thirdGradeFormsMsg','مكتبة Excel غير متاحة؛ حدّث الصفحة وحاول مرة أخرى.','error');return;}
+    const formYear=Number($('#thirdGradeFormYear').value);
+    if(!Number.isInteger(formYear)||formYear<1900||formYear>2200){say('#thirdGradeFormsMsg','أدخل سنة الاستمارة بشكل صحيح.','error');return;}
+    const btn=$('#thirdGradeDownloadBtn');btn.disabled=true;btn.textContent='جارٍ تجهيز الشيت...';say('#thirdGradeFormsMsg','جارٍ جلب بيانات الطالبات وتجهيز ملف Excel...');
+    try{
+      const {data,error}=await state.client.from('students').select('*').order('full_name',{ascending:true}).limit(10000);
+      if(error)throw error;
+      const rows=(data||[]).map((s,i)=>{
+        const d=deriveThirdGradeStudent(s.national_id,s.full_name,formYear);
+        return {'مسلسل':i+1,'كود الطالبة':s.student_code||s.student_no||s.code||'','اسم الطالبة':s.full_name||'','الرقم القومي':normalizeDigits(s.national_id||''),'وظيفة الوالد':s.guardian_job||'','العنوان':s.address||'','تليفون محمول':s.guardian_phone||s.mobile||s.phone||'','تاريخ الميلاد':d.birthDate,'محافظة الميلاد':d.governorate,'السن في أول مايو من عام الاستمارة':d.age,'اسم الأب كامل':d.fatherName};
+      });
+      const ws=XLSX.utils.json_to_sheet(rows,{header:['مسلسل','كود الطالبة','اسم الطالبة','الرقم القومي','وظيفة الوالد','العنوان','تليفون محمول','تاريخ الميلاد','محافظة الميلاد','السن في أول مايو من عام الاستمارة','اسم الأب كامل']});
+      ws['!views']=[{rightToLeft:true}];ws['!cols']=[{wch:9},{wch:16},{wch:32},{wch:18},{wch:24},{wch:36},{wch:18},{wch:16},{wch:20},{wch:28},{wch:28}];
+      const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'استمارات الصف الثالث');
+      XLSX.writeFile(wb,'استمارات_الصف_الثالث_'+formYear+'.xlsx');
+      say('#thirdGradeFormsMsg','تم تجهيز الشيت بعدد '+rows.length+' طالبة، مع استخراج البيانات المتاحة من الرقم القومي والاسم.','success');
+    }catch(err){say('#thirdGradeFormsMsg','تعذر تجهيز الشيت: '+(err?.message||String(err)),'error');}
+    finally{btn.disabled=false;btn.textContent='تحميل شيت إكسل';}
+  }
   async function openLibrary(){
     if(!state.user||!state.profile){state.pendingAction='library';showLogin();return;}
     $('#homeView').classList.add('hidden');$('#loginView').classList.add('hidden');$('#registerView').classList.add('hidden');$('#appView').classList.remove('hidden');
