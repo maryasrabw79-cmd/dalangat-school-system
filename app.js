@@ -37,16 +37,17 @@
     state.client=window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey);
     $('#loginForm').addEventListener('submit',login); $('#studentResultsLoginForm').addEventListener('submit',submitStudentExamLogin); $('#studentExamBackBtn').addEventListener('click',showHome); $('#studentCertificateBackBtn').addEventListener('click',showHome); $('#studentCertificatePrintBtn').addEventListener('click',()=>window.print()); $('#registerForm').addEventListener('submit',activateAccount); $('#showRegisterBtn').addEventListener('click',showRegister); $('#backToLoginBtn').addEventListener('click',showLogin); $('#logoutBtn').addEventListener('click',logout); $('#refreshBtn').addEventListener('click',()=>loadSection(state.section)); $('#homeBtn').addEventListener('click',showHome); $('#exportSelectedBtn').addEventListener('click',()=>exportReportsToExcel($('#exportSectionSelect').value));
     $('#libraryUploadForm').addEventListener('submit',uploadLibraryBook);
-    $('#thirdGradeFormsView').addEventListener('click',(e)=>{
+    $('#thirdGradeFormsView').addEventListener('click',async(e)=>{
       const report=e.target.closest('[data-third-grade-report]');
       if(report){
-        say('#thirdGradeFormsMsg','تم اختيار «'+report.dataset.thirdGradeReport+'». سنضيف أعمدة هذا الكشف وطريقة إخراجه بعد تحديد محتواه.','success');
+        if(report.dataset.thirdGradeReport==='كشف 12'){await printThirdGradeForm12();}
+        else say('#thirdGradeFormsMsg','هذا الكشف لم يُنفذ بعد. كشف 12 هو الكشف المجهز حاليًا.','success');
         return;
       }
       if(e.target.closest('#thirdGradeSourceUploadBtn')){
         const file=$('#thirdGradeSourceFile').files?.[0];
         if(!file){say('#thirdGradeFormsMsg','اختر شيت البيانات الأساسي أولًا.','error');return;}
-        say('#thirdGradeFormsMsg','تم اختيار الملف «'+file.name+'». واجهة الرفع جاهزة؛ ربط الاستيراد وحفظ البيانات يحتاج مطابقة أعمدة الشيت مع حقول قاعدة البيانات حتى لا تتأثر بيانات المنظومة.','success');
+        say('#thirdGradeFormsMsg','تم اختيار الملف «'+file.name+'». استيراد الملف وحفظه في قاعدة البيانات لم يُفعّل بعد؛ كشف 12 يسحب حاليًا من بيانات الطالبات المسجلة بالمنظومة.','success');
       }
     });
     $('#libraryRefreshBtn').addEventListener('click',loadLibraryBooks);
@@ -216,6 +217,58 @@
     say('#thirdGradeFormsMsg','');
   }
   function normalizeDigits(value){return String(value??'').replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/[۰-۹]/g,d=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));}
+  function form12Escape(value){
+    return String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  }
+  async function printThirdGradeForm12(){
+    if(!admin()){say('#thirdGradeFormsMsg','استخراج كشف 12 متاح لمدير النظام فقط.','error');return;}
+    const year=Number($('#thirdGradeFormYear').value);
+    if(!Number.isInteger(year)||year<1900||year>2200){say('#thirdGradeFormsMsg','أدخل عام الاستمارة بصورة صحيحة.','error');return;}
+    const btn=document.querySelector('[data-third-grade-report="كشف 12"]');
+    if(btn){btn.disabled=true;btn.textContent='جارٍ تجهيز الكشف...';}
+    say('#thirdGradeFormsMsg','جارٍ جلب بيانات الطالبات وتجهيز كشف 12...');
+    try{
+      const {data,error}=await state.client.from('students').select('*').order('full_name',{ascending:true}).limit(10000);
+      if(error)throw error;
+      const students=(data||[]).filter(s=>String(s.full_name||s.student_name||'').trim()).sort((a,b)=>String(a.full_name||a.student_name||'').localeCompare(String(b.full_name||b.student_name||''),'ar'));
+      if(!students.length)throw new Error('لا توجد طالبات مسجلات في جدول الطالبات.');
+      const pages=[];
+      for(let i=0;i<students.length;i+=20)pages.push(students.slice(i,i+20));
+      const get=(s,keys)=>{for(const k of keys){if(s[k]!==undefined&&s[k]!==null&&String(s[k]).trim()!=='')return s[k];}return '';};
+      const ageAtExam=(birth,examYear)=>{
+        if(!birth)return '';
+        const d=new Date(birth);if(Number.isNaN(d.getTime()))return '';
+        let y=examYear-d.getFullYear(),m=4-d.getMonth(),day=1-d.getDate();
+        if(day<0){m--;day+=new Date(examYear,4,0).getDate();}
+        if(m<0){y--;m+=12;}
+        return y>=0?y+' سنة / '+m+' شهر / '+day+' يوم':'';
+      };
+      const cell=(v)=>'<td>'+form12Escape(v)+'</td>';
+      const sheets=pages.map((page,pageIndex)=>{
+        const rows=page.map((s,j)=>{
+          const id=normalizeDigits(get(s,['national_id','national_number','national_id_number']));
+          const d=deriveThirdGradeStudent(id,get(s,['full_name','student_name']),year);
+          const birth=get(s,['birth_date','date_of_birth'])||d.birthDate;
+          const birthText=birth?(String(birth).includes('-')?String(birth).split('T')[0]:birth):'';
+          const name=get(s,['full_name','student_name']);
+          const father=get(s,['father_name','guardian_name','parent_name'])||d.fatherName;
+          return '<tr>'+cell(pageIndex*20+j+1)+cell(get(s,['student_code','student_no','code']))+cell(name)+cell(get(s,['religion','religious_affiliation']))+cell(birthText)+cell(get(s,['birth_governorate','birth_place','governorate'])||d.governorate)+cell(ageAtExam(birthText,year)||([d.ageYears,d.ageMonths,d.ageDays].some(x=>x!=='')?[d.ageYears+' سنة / '+d.ageMonths+' شهر / '+d.ageDays+' يوم']:'') )+cell(id)+cell(father)+cell(get(s,['father_occupation','guardian_job','parent_job']))+cell(get(s,['guardian_address','address','home_address']))+cell(get(s,['guardian_phone','mobile','phone']))+'</tr>';
+        }).join('');
+        const blanks=Array.from({length:20-page.length},(_,j)=>'<tr>'+Array.from({length:12},()=>'<td>&nbsp;</td>').join('')+'</tr>').join('');
+        return '<section class="sheet"><div class="heading"><div>وزارة التربية والتعليم</div><div>امتحان دبلوم المدارس الثانوية الفنية الصناعية نظام الثلاث سنوات لعام '+year+' م</div><strong>كشف 12 امتحانات (ثانوي صناعي)</strong><div class="subheading">الإدارة العامة للامتحانات</div><div>كشف بأسماء الطالبات المتقدمات للامتحان من تخصص: ....................</div><div>كشف رقم ( '+(pageIndex+1)+' )</div><div class="school">مدرسة الدلنجات الصناعية بنات — مديرية / إدارة الدلنجات التعليمية بمحافظة البحيرة</div><div>(جميع الطالبات مصريات الجنسية ويدرسن اللغة الإنجليزية)</div></div><table><thead><tr><th>م</th><th>كود</th><th>اسم الطالبة</th><th>الديانة</th><th>تاريخ الميلاد</th><th>محل الميلاد (المحافظة)</th><th>السن في تاريخ الامتحان</th><th>الرقم القومي</th><th>اسم والد الطالبة</th><th>صناعته</th><th>عنوان ولي الأمر</th><th>رقم التليفون</th></tr></thead><tbody>'+rows+blanks+'</tbody></table><div class="footerline"><span>تم تحرير الكشوف من واقع ملفات الطلاب بالمدرسة وبعد التأكد من قانونية تقدم الطلبة للامتحان،،</span><span class="seal">خاتم شعار الجمهورية</span></div><div class="bottomline"><span><b>تنبيهات عامة:</b> 1- تكتب الأسماء بالكشوف مرتبة هجائيًا ولكل صناعة على حدة ولكل فئة على حدة (منتظمون – عمال – منازل).</span><span class="approval">يعتمد،،<br>مدير المدرسة</span></div><div class="page-count">كشف '+(pageIndex+1)+' من '+pages.length+'</div></section>';
+      }).join('');
+      const win=window.open('','_blank');
+      if(!win)throw new Error('المتصفح منع نافذة الطباعة. اسمح بالنوافذ المنبثقة للمنظومة ثم أعد المحاولة.');
+      win.document.open();
+      win.document.write('<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>كشف 12 - '+year+'</title><style>@page{size:A4 landscape;margin:7mm}*{box-sizing:border-box}body{font-family:Tahoma,Arial,sans-serif;color:#111;margin:0}.sheet{border:4px double #111;padding:4mm;min-height:190mm;page-break-after:always;position:relative}.sheet:last-child{page-break-after:auto}.heading{text-align:center;line-height:1.45;font-size:10pt}.heading strong{display:block;font-size:14pt;margin:1mm 0}.subheading{font-weight:bold}.school{font-weight:bold;margin-top:1mm}table{border-collapse:collapse;width:100%;table-layout:fixed;margin-top:3mm;font-size:7.2pt}th,td{border:1px solid #333;text-align:center;padding:1.2mm .5mm;overflow-wrap:anywhere;height:6.3mm}th{font-weight:bold;background:#f2f2f2}th:nth-child(1){width:3%}th:nth-child(2){width:5%}th:nth-child(3){width:12%}th:nth-child(4){width:4%}th:nth-child(5){width:7%}th:nth-child(6){width:8%}th:nth-child(7){width:9%}th:nth-child(8){width:10%}th:nth-child(9){width:10%}th:nth-child(10){width:8%}th:nth-child(11){width:13%}th:nth-child(12){width:11%}.footerline{display:flex;justify-content:space-between;align-items:center;font-size:8pt;margin-top:3mm;gap:8mm}.seal{font-weight:bold;white-space:nowrap}.bottomline{display:flex;justify-content:space-between;align-items:flex-start;gap:8mm;font-size:8pt;margin-top:3mm}.approval{text-align:center;min-width:30mm;font-weight:bold;white-space:nowrap}.page-count{position:absolute;bottom:1mm;left:4mm;font-size:7pt;color:#555}@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body>'+sheets+'</body></html>');
+      win.document.close();
+      win.focus();
+      setTimeout(()=>{try{win.print();}catch(e){}},600);
+      say('#thirdGradeFormsMsg','تم تجهيز كشف 12 للطباعة: '+students.length+' طالبة في '+pages.length+' كشف، بواقع 20 طالبة في الكشف الواحد. البيانات غير المسجلة في ملفات الطالبات ستظهر فارغة.','success');
+    }catch(err){say('#thirdGradeFormsMsg','تعذر استخراج كشف 12: '+(err?.message||String(err)),'error');}
+    finally{if(btn){btn.disabled=false;btn.textContent='كشف 12';}}
+  }
+
   function deriveThirdGradeStudent(nationalId,fullName,formYear){
     const id=normalizeDigits(nationalId).trim();
     let birthDate='',governorate='';
