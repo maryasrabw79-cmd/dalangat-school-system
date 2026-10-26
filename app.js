@@ -220,16 +220,22 @@
       governorate=governorates[code]||'غير محددة';
     }
     const targetYear=Number(formYear);
-    let age='';
+    let ageYears='',ageMonths='',ageDays='';
     if(birthDate&&Number.isInteger(targetYear)&&targetYear>=1900&&targetYear<=2200){
-      const [y,m,d]=birthDate.split('-').map(Number);
-      let years=targetYear-y;
-      if(m>5||(m===5&&d>1))years--;
-      age=years>=0?years:'تاريخ الميلاد بعد أول مايو';
+      const [by,bm,bd]=birthDate.split('-').map(Number);
+      const target=new Date(targetYear,4,1);
+      const birth=new Date(by,bm-1,bd);
+      if(birth<=target){
+        let years=targetYear-by, months=5-bm, days=1-bd;
+        if(days<0){months--;days+=new Date(targetYear,4,0).getDate();}
+        if(months<0){years--;months+=12;}
+        ageYears=years;ageMonths=months;ageDays=days;
+      }
     }
     const parts=String(fullName||'').trim().split(/\\s+/).filter(Boolean);
     const fatherName=parts.length>=2?parts.slice(1).join(' '):'';
-    return {birthDate,governorate,age,fatherName};
+    const [birthYear,birthMonth,birthDay]=birthDate?birthDate.split('-'):[ '', '', '' ];
+    return {birthDate,birthYear,birthMonth,birthDay,governorate,ageYears,ageMonths,ageDays,fatherName};
   }
   async function downloadThirdGradeFormsSheet(){
     if(!admin()){say('#thirdGradeFormsMsg','تنزيل الشيت متاح لمدير النظام فقط.','error');return;}
@@ -242,10 +248,10 @@
       if(error)throw error;
       const rows=(data||[]).map((s,i)=>{
         const d=deriveThirdGradeStudent(s.national_id,s.full_name,formYear);
-        return {'مسلسل':i+1,'كود الطالبة':s.student_code||s.student_no||s.code||'','اسم الطالبة':s.full_name||'','الرقم القومي':normalizeDigits(s.national_id||''),'وظيفة الوالد':s.guardian_job||'','العنوان':s.address||'','تليفون محمول':s.guardian_phone||s.mobile||s.phone||'','تاريخ الميلاد':d.birthDate,'محافظة الميلاد':d.governorate,'السن في أول مايو من عام الاستمارة':d.age,'اسم الأب كامل':d.fatherName};
+        return {'مسلسل':i+1,'كود الطالبة':s.student_code||s.student_no||s.code||'','اسم الطالبة':s.full_name||'','الرقم القومي':normalizeDigits(s.national_id||''),'وظيفة الوالد':s.guardian_job||'','العنوان':s.address||'','تليفون محمول':s.guardian_phone||s.mobile||s.phone||'','يوم الميلاد':d.birthDay,'شهر الميلاد':d.birthMonth,'سنة الميلاد':d.birthYear,'محافظة الميلاد':d.governorate,'السن - سنوات':d.ageYears,'السن - شهور':d.ageMonths,'السن - أيام':d.ageDays,'اسم الأب كامل':d.fatherName};
       });
-      const ws=XLSX.utils.json_to_sheet(rows,{header:['مسلسل','كود الطالبة','اسم الطالبة','الرقم القومي','وظيفة الوالد','العنوان','تليفون محمول','تاريخ الميلاد','محافظة الميلاد','السن في أول مايو من عام الاستمارة','اسم الأب كامل']});
-      ws['!views']=[{rightToLeft:true}];ws['!cols']=[{wch:9},{wch:16},{wch:32},{wch:18},{wch:24},{wch:36},{wch:18},{wch:16},{wch:20},{wch:28},{wch:28}];
+      const ws=XLSX.utils.json_to_sheet(rows,{header:['مسلسل','كود الطالبة','اسم الطالبة','الرقم القومي','وظيفة الوالد','العنوان','تليفون محمول','يوم الميلاد','شهر الميلاد','سنة الميلاد','محافظة الميلاد','السن - سنوات','السن - شهور','السن - أيام','اسم الأب كامل']});
+      ws['!views']=[{rightToLeft:true}];ws['!cols']=[{wch:9},{wch:16},{wch:32},{wch:18},{wch:24},{wch:36},{wch:18},{wch:12},{wch:12},{wch:12},{wch:20},{wch:12},{wch:12},{wch:12},{wch:28}];
       const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'استمارات الصف الثالث');
       XLSX.writeFile(wb,'استمارات_الصف_الثالث_'+formYear+'.xlsx');
       say('#thirdGradeFormsMsg','تم تجهيز الشيت بعدد '+rows.length+' طالبة، مع استخراج البيانات المتاحة من الرقم القومي والاسم.','success');
