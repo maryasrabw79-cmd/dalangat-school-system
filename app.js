@@ -787,7 +787,7 @@
       if(yearInput)yearInput.value='2026/2027';
       if(birthInput)birthInput.readOnly=true;if(ageInput)ageInput.readOnly=true;
       const derive=()=>{
-        if(fatherInput){const parts=(nameInput?.value||'').trim().split(/\\s+/).filter(Boolean);fatherInput.value=parts.length>=2?parts[1]:'';}
+        if(fatherInput){const parts=(nameInput?.value||'').trim().split(/\s+/).filter(Boolean);fatherInput.value=parts.length>=2?parts[1]:'';}
         const id=(idInput?.value||'').replace(/\\s/g,'');
         let birth='';
         if(/^\\d{14}$/.test(id)){
@@ -855,7 +855,7 @@
     grade:['الصف','الصف الدراسي','grade'],
     enrollment_status:['حالة القيد','الحالة','enrollment_status']
   };
-  function admissionsNormalizeHeader(value){return String(value??'').trim().toLowerCase().replace(/[ـًٌٍَُِّْٰ]/g,'').replace(/[\\s_\\-().:]/g,'');}
+  function admissionsNormalizeHeader(value){return String(value??'').trim().toLowerCase().replace(/[ـًٌٍَُِّْٰ]/g,'').replace(/[\s_\-().:]/g,'');}
   function admissionsCell(row,aliases){
     const keys=Object.keys(row||{}),wanted=new Set(aliases.map(admissionsNormalizeHeader));
     const key=keys.find(k=>wanted.has(admissionsNormalizeHeader(k)));
@@ -865,10 +865,10 @@
     const get=k=>admissionsCell(row,admissionsHeaderAliases[k]);
     const data={};
     for(const key of Object.keys(admissionsHeaderAliases)){const value=get(key);if(value!==''&&value!==null&&value!==undefined)data[key]=String(value).trim();}
-    data.national_id=String(data.national_id||'').replace(/[\\s\\u200e\\u200f]/g,'');
+    data.national_id=String(data.national_id||'').replace(/[\s\u200e\u200f]/g,'');
     data.academic_year=data.academic_year||year;
     if(!data.full_name)return {error:'اسم الطالبة غير موجود'};
-    if(!/^\\d{14}$/.test(data.national_id))return {error:'الرقم القومي يجب أن يتكون من 14 رقمًا'};
+    if(!/^\d{14}$/.test(data.national_id))return {error:'الرقم القومي يجب أن يتكون من 14 رقمًا'};
     const id=data.national_id,century=id[0]==='2'?1900:id[0]==='3'?2000:0;
     const yy=Number(id.slice(1,3)),mm=Number(id.slice(3,5)),dd=Number(id.slice(5,7));
     if(!century||mm<1||mm>12||dd<1||dd>31)return {error:'الرقم القومي لا يحتوي على تاريخ ميلاد صالح'};
